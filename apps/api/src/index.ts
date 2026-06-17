@@ -5,7 +5,10 @@ import { buildApp } from "./app.js";
 async function main(): Promise<void> {
   const config = loadConfig();
   const deps = buildDependencies(config);
-  const app = await buildApp(deps, { maxUploadBytes: config.maxUploadBytes });
+  const app = await buildApp(deps, {
+    maxUploadBytes: config.maxUploadBytes,
+    staticRoot: config.storage.root,
+  });
 
   await app.listen({ port: config.port, host: "0.0.0.0" });
   // eslint-disable-next-line no-console

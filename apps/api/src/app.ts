@@ -1,5 +1,7 @@
+import { isAbsolute, resolve } from "node:path";
 import Fastify, { type FastifyInstance } from "fastify";
 import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerAssetRoutes } from "./routes/assets.js";
 import { registerPublishRoutes } from "./routes/publish.js";
@@ -7,6 +9,8 @@ import type { AppDependencies } from "./dependencies.js";
 
 export interface BuildAppOptions {
   maxUploadBytes?: number;
+  /** When set, serves stored files (renditions/originals) at /files/*. */
+  staticRoot?: string;
 }
 
 export async function buildApp(
@@ -18,6 +22,13 @@ export async function buildApp(
   await app.register(multipart, {
     limits: { fileSize: options.maxUploadBytes ?? 25 * 1024 * 1024, files: 1 },
   });
+
+  if (options.staticRoot) {
+    const root = isAbsolute(options.staticRoot)
+      ? options.staticRoot
+      : resolve(process.cwd(), options.staticRoot);
+    await app.register(fastifyStatic, { root, prefix: "/files/" });
+  }
 
   app.get("/api/health", async () => ({ status: "ok" }));
 
