@@ -10,6 +10,13 @@ import type {
   PublicationDTO,
 } from "../../../lib/types";
 
+function formatCreatedAt(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export default function AssetDetailPage() {
   const { client } = useAuth();
   const router = useRouter();
@@ -116,6 +123,9 @@ export default function AssetDetailPage() {
                   </span>
                   <span>{asset.format.toUpperCase()}</span>
                   <span>{Math.round(asset.sizeBytes / 1024)} KB</span>
+                  <time dateTime={asset.createdAt}>
+                    Created {formatCreatedAt(asset.createdAt)}
+                  </time>
                 </div>
               </div>
             </div>
