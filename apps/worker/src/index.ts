@@ -1,4 +1,6 @@
 import { Worker } from "bullmq";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { DiskStorageProvider } from "@assetx/storage";
 import { SharpImageProcessor } from "@assetx/image-processing";
@@ -12,13 +14,19 @@ import { processAsset } from "./process-asset.js";
 import { publishAsset } from "./publish-asset.js";
 import type { WorkerDependencies } from "./dependencies.js";
 
+const workspaceRoot = fileURLToPath(new URL("../../..", import.meta.url));
+
+function storageRoot(): string {
+  return resolve(workspaceRoot, process.env.STORAGE_ROOT ?? "./storage-data");
+}
+
 function buildDeps(): WorkerDependencies {
   const publicBaseUrl =
     process.env.PUBLIC_BASE_URL ?? "http://localhost:3001/files";
   return {
     prisma: new PrismaClient(),
     storage: new DiskStorageProvider({
-      root: process.env.STORAGE_ROOT ?? "./storage-data",
+      root: storageRoot(),
       baseUrl: publicBaseUrl,
     }),
     processor: new SharpImageProcessor(),

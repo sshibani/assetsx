@@ -1,3 +1,6 @@
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 export interface AppConfig {
   port: number;
   nodeEnv: string;
@@ -18,6 +21,8 @@ export interface AppConfig {
   maxUploadBytes: number;
 }
 
+const workspaceRoot = fileURLToPath(new URL("../../..", import.meta.url));
+
 function required(name: string, fallback?: string): string {
   const value = process.env[name] ?? fallback;
   if (value === undefined) {
@@ -26,7 +31,12 @@ function required(name: string, fallback?: string): string {
   return value;
 }
 
+function resolveFromWorkspaceRoot(path: string): string {
+  return resolve(workspaceRoot, path);
+}
+
 export function loadConfig(): AppConfig {
+  const storageRoot = process.env.STORAGE_ROOT ?? "./storage-data";
   return {
     port: Number(process.env.PORT ?? 3001),
     nodeEnv: process.env.NODE_ENV ?? "development",
@@ -37,7 +47,7 @@ export function loadConfig(): AppConfig {
       refreshTtl: process.env.JWT_REFRESH_TTL ?? "7d",
     },
     storage: {
-      root: process.env.STORAGE_ROOT ?? "./storage-data",
+      root: resolveFromWorkspaceRoot(storageRoot),
       publicBaseUrl: process.env.PUBLIC_BASE_URL ?? "http://localhost:3001/files",
     },
     redis: {
