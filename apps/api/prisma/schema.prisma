@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  passwordHash String
+  role         String         @default("user") // admin | user
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  assets       Asset[]
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Asset {
+  id             String        @id @default(uuid())
+  ownerId        String
+  originalName   String
+  status         String        @default("pending") // pending | processing | ready | failed
+  checksum       String
+  width          Int?
+  height         Int?
+  format         String
+  sizeBytes      Int
+  title          String?
+  description    String?
+  altText        String?
+  tags           String        @default("[]") // JSON-encoded string[]
+  metadataSource String        @default("manual") // manual | llm
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  owner          User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  renditions     Rendition[]
+  publications   Publication[]
+
+  @@index([ownerId])
+}
+
+model Rendition {
+  id         String @id @default(uuid())
+  assetId    String
+  name       String // thumb | standard | large | original
+  storageKey String
+  width      Int
+  height     Int
+  format     String
+  sizeBytes  Int
+  asset      Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, name])
+  @@index([assetId])
+}
+
+model Publication {
+  id        String   @id @default(uuid())
+  assetId   String
+  channelId String
+  status    String // success | failed
+  reference String?
+  error     String?
+  createdAt DateTime @default(now())
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+}
