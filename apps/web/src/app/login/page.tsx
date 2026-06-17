@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../../lib/client-context.js";
+import { useAuth } from "../../lib/client-context";
+import { ApiError } from "../../lib/api-client";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -17,8 +18,16 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push("/");
-    } catch {
-      setError("Invalid credentials");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setError("Invalid credentials");
+      } else if (err instanceof ApiError) {
+        setError(`Login failed (HTTP ${err.status})`);
+      } else {
+        setError(
+          err instanceof Error ? `Login error: ${err.message}` : "Login error",
+        );
+      }
     }
   };
 

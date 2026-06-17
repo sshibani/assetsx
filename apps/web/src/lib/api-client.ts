@@ -3,7 +3,7 @@ import type {
   AuthTokens,
   ChannelInfoLike,
   PublicationDTO,
-} from "./types.js";
+} from "./types";
 
 export interface ApiClientOptions {
   baseUrl: string;
@@ -26,7 +26,10 @@ export class ApiClient {
 
   constructor(options: ApiClientOptions) {
     this.baseUrl = options.baseUrl;
-    this.fetchFn = options.fetchFn ?? fetch;
+    // Wrap the global fetch so it is always invoked with the correct `this`
+    // context. Assigning `fetch` directly to an instance property and calling
+    // it as `this.fetchFn(...)` throws "Illegal invocation" in browsers.
+    this.fetchFn = options.fetchFn ?? ((input, init) => fetch(input, init));
   }
 
   setAccessToken(token: string | null): void {

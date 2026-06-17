@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ApiClient } from "./api-client.js";
+import { ApiClient } from "./api-client";
 
 interface AuthContextValue {
   client: ApiClient;

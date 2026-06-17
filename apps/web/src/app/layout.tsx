@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AuthProvider } from "../lib/client-context.js";
+import { AuthProvider } from "../lib/client-context";
 import "./globals.css";
 
 export const metadata = {

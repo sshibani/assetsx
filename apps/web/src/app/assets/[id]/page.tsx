@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "../../../lib/client-context.js";
+import { useAuth } from "../../../lib/client-context";
 import type {
   AssetDTO,
   ChannelInfoLike,
   PublicationDTO,
-} from "../../../lib/types.js";
+} from "../../../lib/types";
 
 export default function AssetDetailPage() {
   const { client } = useAuth();

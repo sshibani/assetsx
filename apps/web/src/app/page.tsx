@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "../lib/client-context.js";
-import type { AssetDTO } from "../lib/types.js";
+import { useAuth } from "../lib/client-context";
+import type { AssetDTO } from "../lib/types";
 
 export default function GalleryPage() {
   const { client, isAuthenticated, logout } = useAuth();

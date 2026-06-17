@@ -55,3 +55,35 @@ describe("ApiClient authenticated requests", () => {
     await expect(client.listAssets()).rejects.toThrow(/403/);
   });
 });
+
+describe("ApiClient default fetch binding", () => {
+  it("calls the global fetch with the correct this-context (no Illegal invocation)", async () => {
+    // Browsers' native fetch throws "Illegal invocation" if called with a
+    // `this` other than the global object. Simulate that contract.
+    const original = globalThis.fetch;
+    const calls: string[] = [];
+    function boundOnlyFetch(this: unknown, url: string) {
+      if (this !== globalThis && this !== undefined) {
+        throw new TypeError("Illegal invocation");
+      }
+      calls.push(url);
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ items: [] }),
+        text: async () => "{}",
+      } as Response);
+    }
+    globalThis.fetch = boundOnlyFetch as typeof fetch;
+
+    try {
+      // No fetchFn provided -> must use the global fetch safely.
+      const client = new ApiClient({ baseUrl: "" });
+      client.setAccessToken("t");
+      await expect(client.listAssets()).resolves.toEqual({ items: [] });
+      expect(calls).toEqual(["/api/assets"]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+});
