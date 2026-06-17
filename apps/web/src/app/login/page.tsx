@@ -11,10 +11,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState("admin@assetx.local");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSubmitting(true);
     try {
       await login(email, password);
       router.push("/");
@@ -28,32 +30,57 @@ export default function LoginPage() {
           err instanceof Error ? `Login error: ${err.message}` : "Login error",
         );
       }
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="container" style={{ maxWidth: 360, marginTop: 80 }}>
-      <h1>AssetX</h1>
-      <form onSubmit={onSubmit}>
-        <input
-          className="input"
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          className="input"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {error && <p style={{ color: "#e27e7e" }}>{error}</p>}
-        <button className="btn" type="submit" style={{ width: "100%" }}>
-          Log in
-        </button>
-      </form>
+    <div className="auth-wrap">
+      <div className="auth-card">
+        <div className="brand">
+          <span className="brand-mark">A</span>
+          AssetX
+        </div>
+        <p className="auth-sub">Sign in to manage your image assets</p>
+
+        <form onSubmit={onSubmit}>
+          <div className="field">
+            <label className="label" htmlFor="email">
+              Email
+            </label>
+            <input
+              id="email"
+              className="input"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label className="label" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              className="input"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          {error && <div className="error-text">{error}</div>}
+
+          <button className="btn block" type="submit" disabled={submitting}>
+            {submitting ? "Signing in…" : "Log in"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

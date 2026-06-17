@@ -48,15 +48,21 @@ export default function GalleryPage() {
 
   return (
     <>
-      <div className="header">
-        <strong>AssetX</strong>
-        <div style={{ display: "flex", gap: 12 }}>
+      <header className="appbar">
+        <div className="brand">
+          <span className="brand-mark">A</span>
+          AssetX
+        </div>
+        <div className="appbar-actions">
           <button
             className="btn"
             disabled={uploading}
             onClick={() => fileInput.current?.click()}
           >
-            {uploading ? "Uploading…" : "Upload image"}
+            <span aria-hidden>＋</span>
+            <span className="btn-label">
+              {uploading ? "Uploading…" : "Upload image"}
+            </span>
           </button>
           <button className="btn secondary" onClick={logout}>
             Log out
@@ -69,12 +75,26 @@ export default function GalleryPage() {
             onChange={onUpload}
           />
         </div>
-      </div>
-      <div className="container">
+      </header>
+
+      <main className="container">
         {loading ? (
-          <p>Loading…</p>
+          <div className="center-state">
+            <div className="spinner" />
+            <p>Loading your assets…</p>
+          </div>
         ) : assets.length === 0 ? (
-          <p>No assets yet. Upload your first image.</p>
+          <div className="center-state">
+            <h2>No assets yet</h2>
+            <p>Upload your first image to get started.</p>
+            <button
+              className="btn"
+              disabled={uploading}
+              onClick={() => fileInput.current?.click()}
+            >
+              {uploading ? "Uploading…" : "Upload image"}
+            </button>
+          </div>
         ) : (
           <div className="grid">
             {assets.map((a) => {
@@ -82,12 +102,16 @@ export default function GalleryPage() {
               return (
                 <Link key={a.id} href={`/assets/${a.id}`} className="card">
                   {thumb ? (
-                    <img src={thumb.url} alt={a.altText ?? a.originalName} />
+                    <img
+                      className="thumb"
+                      src={thumb.url}
+                      alt={a.altText ?? a.originalName}
+                    />
                   ) : (
-                    <div style={{ height: 160 }} />
+                    <div className="thumb placeholder">Processing…</div>
                   )}
                   <div className="meta">
-                    <div>{a.title ?? a.originalName}</div>
+                    <div className="title">{a.title ?? a.originalName}</div>
                     <span className={`badge ${a.status}`}>{a.status}</span>
                   </div>
                 </Link>
@@ -95,7 +119,7 @@ export default function GalleryPage() {
             })}
           </div>
         )}
-      </div>
+      </main>
     </>
   );
 }

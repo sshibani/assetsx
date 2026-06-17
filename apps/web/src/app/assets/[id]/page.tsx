@@ -20,6 +20,7 @@ export default function AssetDetailPage() {
   const [channels, setChannels] = useState<ChannelInfoLike[]>([]);
   const [publications, setPublications] = useState<PublicationDTO[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [saved, setSaved] = useState(false);
 
   const load = async () => {
     const [a, ch, pubs] = await Promise.all([
@@ -47,23 +48,27 @@ export default function AssetDetailPage() {
   const save = async (data: Partial<AssetDTO>) => {
     const updated = await client.updateAsset(id, data);
     setAsset(updated);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
   };
 
   const publish = async () => {
     if (selected.length === 0) return;
     await client.publish(id, selected);
-    setTimeout(load, 500);
+    setTimeout(load, 600);
   };
 
   const remove = async () => {
+    if (!confirm("Delete this asset and all its renditions?")) return;
     await client.deleteAsset(id);
     router.push("/");
   };
 
   if (!asset) {
     return (
-      <div className="container">
-        <p>Loading…</p>
+      <div className="center-state">
+        <div className="spinner" />
+        <p>Loading asset…</p>
       </div>
     );
   }
@@ -74,118 +79,178 @@ export default function AssetDetailPage() {
 
   return (
     <>
-      <div className="header">
-        <Link href="/">← Back</Link>
-        <button className="btn secondary" onClick={remove}>
-          Delete
-        </button>
-      </div>
-      <div className="container" style={{ display: "grid", gap: 24, gridTemplateColumns: "1fr 1fr" }}>
-        <div>
-          {standard && (
-            <img
-              src={standard.url}
-              alt={asset.altText ?? asset.originalName}
-              style={{ width: "100%", borderRadius: 8 }}
-            />
+      <header className="appbar">
+        <Link href="/" className="brand" style={{ fontSize: 16 }}>
+          <span aria-hidden>←</span> Back to gallery
+        </Link>
+        <div className="appbar-actions">
+          {saved && (
+            <span className="badge ready" style={{ alignSelf: "center" }}>
+              Saved
+            </span>
           )}
-          <p>
-            Status: <span className={`badge ${asset.status}`}>{asset.status}</span>
-          </p>
-          <p>
-            {asset.width}×{asset.height} · {asset.format} ·{" "}
-            {Math.round(asset.sizeBytes / 1024)} KB
-          </p>
-          <h3>Renditions</h3>
-          <ul>
-            {asset.renditions.map((r) => (
-              <li key={r.id}>
-                <a href={r.url} target="_blank" rel="noreferrer">
-                  {r.name}
-                </a>{" "}
-                ({r.width}×{r.height})
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h3>Metadata</h3>
-          <label>Title</label>
-          <input
-            className="input"
-            defaultValue={asset.title ?? ""}
-            onBlur={(e) => save({ title: e.target.value })}
-          />
-          <label>Description</label>
-          <textarea
-            className="input"
-            defaultValue={asset.description ?? ""}
-            onBlur={(e) => save({ description: e.target.value })}
-          />
-          <label>Alt text</label>
-          <input
-            className="input"
-            defaultValue={asset.altText ?? ""}
-            onBlur={(e) => save({ altText: e.target.value })}
-          />
-          <label>Tags (comma separated)</label>
-          <input
-            className="input"
-            defaultValue={asset.tags.join(", ")}
-            onBlur={(e) =>
-              save({
-                tags: e.target.value
-                  .split(",")
-                  .map((t) => t.trim())
-                  .filter(Boolean),
-              })
-            }
-          />
-
-          <h3>Publish</h3>
-          {channels.map((c) => (
-            <label key={c.id} style={{ display: "block" }}>
-              <input
-                type="checkbox"
-                checked={selected.includes(c.id)}
-                onChange={(e) =>
-                  setSelected((s) =>
-                    e.target.checked
-                      ? [...s, c.id]
-                      : s.filter((x) => x !== c.id),
-                  )
-                }
-              />{" "}
-              {c.label}
-            </label>
-          ))}
-          <button className="btn" onClick={publish} style={{ marginTop: 12 }}>
-            Publish
+          <button className="btn danger" onClick={remove}>
+            Delete
           </button>
-
-          <h3>Publish history</h3>
-          {publications.length === 0 ? (
-            <p>Not published yet.</p>
-          ) : (
-            <ul>
-              {publications.map((p) => (
-                <li key={p.id}>
-                  {p.channelId} —{" "}
-                  <span className={`badge ${p.status === "success" ? "ready" : "failed"}`}>
-                    {p.status}
-                  </span>{" "}
-                  {p.reference && (
-                    <a href={p.reference} target="_blank" rel="noreferrer">
-                      link
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
-      </div>
+      </header>
+
+      <main className="container">
+        <div className="detail-grid">
+          {/* Left: preview + renditions */}
+          <div>
+            <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
+              {standard && (
+                <img
+                  className="preview"
+                  src={standard.url}
+                  alt={asset.altText ?? asset.originalName}
+                  style={{ border: "none", borderRadius: 0 }}
+                />
+              )}
+              <div style={{ padding: "18px 20px" }}>
+                <div className="kv">
+                  <span className={`badge ${asset.status}`}>{asset.status}</span>
+                  <span>
+                    {asset.width ?? "?"}×{asset.height ?? "?"}
+                  </span>
+                  <span>{asset.format.toUpperCase()}</span>
+                  <span>{Math.round(asset.sizeBytes / 1024)} KB</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="panel" style={{ marginTop: 20 }}>
+              <h3 className="section-title">Renditions</h3>
+              <ul className="rendition-list">
+                {asset.renditions.map((r) => (
+                  <li key={r.id}>
+                    <a href={r.url} target="_blank" rel="noreferrer">
+                      {r.name}
+                    </a>
+                    <span className="dim">
+                      {r.width}×{r.height} · {r.format}
+                    </span>
+                  </li>
+                ))}
+                {asset.renditions.length === 0 && (
+                  <li className="dim">Renditions are still being generated…</li>
+                )}
+              </ul>
+            </div>
+          </div>
+
+          {/* Right: metadata + publish */}
+          <div>
+            <div className="panel">
+              <h3 className="section-title">Metadata</h3>
+              <div className="field">
+                <label className="label">Title</label>
+                <input
+                  className="input"
+                  placeholder="Untitled"
+                  defaultValue={asset.title ?? ""}
+                  onBlur={(e) => save({ title: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label className="label">Description</label>
+                <textarea
+                  className="textarea"
+                  placeholder="Describe this asset…"
+                  defaultValue={asset.description ?? ""}
+                  onBlur={(e) => save({ description: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label className="label">Alt text</label>
+                <input
+                  className="input"
+                  placeholder="Accessible description"
+                  defaultValue={asset.altText ?? ""}
+                  onBlur={(e) => save({ altText: e.target.value })}
+                />
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label className="label">Tags (comma separated)</label>
+                <input
+                  className="input"
+                  placeholder="nature, sky, blue"
+                  defaultValue={asset.tags.join(", ")}
+                  onBlur={(e) =>
+                    save({
+                      tags: e.target.value
+                        .split(",")
+                        .map((t) => t.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="panel" style={{ marginTop: 20 }}>
+              <h3 className="section-title">Publish</h3>
+              {channels.map((c) => (
+                <label key={c.id} className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(c.id)}
+                    onChange={(e) =>
+                      setSelected((s) =>
+                        e.target.checked
+                          ? [...s, c.id]
+                          : s.filter((x) => x !== c.id),
+                      )
+                    }
+                  />
+                  {c.label}
+                </label>
+              ))}
+              <button
+                className="btn block"
+                onClick={publish}
+                disabled={selected.length === 0}
+                style={{ marginTop: 8 }}
+              >
+                Publish to {selected.length || "0"} channel
+                {selected.length === 1 ? "" : "s"}
+              </button>
+
+              <h3 className="section-title" style={{ marginTop: 24 }}>
+                Publish history
+              </h3>
+              {publications.length === 0 ? (
+                <p className="dim" style={{ color: "var(--text-muted)" }}>
+                  Not published yet.
+                </p>
+              ) : (
+                <ul className="pub-list">
+                  {publications.map((p) => (
+                    <li key={p.id}>
+                      <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <span
+                          className={`badge ${
+                            p.status === "success" ? "ready" : "failed"
+                          }`}
+                        >
+                          {p.status}
+                        </span>
+                        {p.channelId}
+                      </span>
+                      {p.reference && (
+                        <a href={p.reference} target="_blank" rel="noreferrer">
+                          Open ↗
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
     </>
   );
 }
