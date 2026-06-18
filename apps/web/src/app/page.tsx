@@ -6,6 +6,10 @@ import Link from "next/link";
 import { useAuth } from "../lib/client-context";
 import type { AssetDTO } from "../lib/types";
 
+function isExpired(value: string | null): boolean {
+  return value !== null && new Date(value).getTime() < Date.now();
+}
+
 export default function GalleryPage() {
   const { client, isAuthenticated, logout } = useAuth();
   const router = useRouter();
@@ -99,6 +103,7 @@ export default function GalleryPage() {
           <div className="grid">
             {assets.map((a) => {
               const thumb = a.renditions.find((r) => r.name === "thumb");
+              const expired = isExpired(a.expiresAt);
               return (
                 <Link key={a.id} href={`/assets/${a.id}`} className="card">
                   {thumb ? (
@@ -112,7 +117,10 @@ export default function GalleryPage() {
                   )}
                   <div className="meta">
                     <div className="title">{a.title ?? a.originalName}</div>
-                    <span className={`badge ${a.status}`}>{a.status}</span>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <span className={`badge ${a.status}`}>{a.status}</span>
+                      {expired && <span className="badge failed">Expired</span>}
+                    </div>
                   </div>
                 </Link>
               );
