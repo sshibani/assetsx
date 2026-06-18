@@ -270,6 +270,10 @@ export default function AssetDetailPage() {
                 </ul>
               )}
             </div>
+
+            <div className="panel" style={{ marginTop: 20 }}>
+              <h3 className="section-title">Comments & activity</h3>
+            </div>
           </div>
         </div>
       </main>
