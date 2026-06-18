@@ -17,6 +17,21 @@ function formatCreatedAt(value: string): string {
   }).format(new Date(value));
 }
 
+function formatExpiryDate(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+  }).format(new Date(value));
+}
+
+function expiryInputValue(value: string | null): string {
+  return value?.slice(0, 10) ?? "";
+}
+
+function expiryLabel(value: string): string {
+  const prefix = new Date(value).getTime() < Date.now() ? "Expired" : "Expires";
+  return `${prefix} ${formatExpiryDate(value)}`;
+}
+
 export default function AssetDetailPage() {
   const { client } = useAuth();
   const router = useRouter();
@@ -126,6 +141,11 @@ export default function AssetDetailPage() {
                   <time dateTime={asset.createdAt}>
                     Created {formatCreatedAt(asset.createdAt)}
                   </time>
+                  {asset.expiresAt && (
+                    <time dateTime={asset.expiresAt}>
+                      {expiryLabel(asset.expiresAt)}
+                    </time>
+                  )}
                 </div>
               </div>
             </div>
@@ -194,6 +214,17 @@ export default function AssetDetailPage() {
                         .map((t) => t.trim())
                         .filter(Boolean),
                     })
+                  }
+                />
+              </div>
+              <div className="field" style={{ marginTop: 18, marginBottom: 0 }}>
+                <label className="label">Expiry date</label>
+                <input
+                  className="input"
+                  type="date"
+                  defaultValue={expiryInputValue(asset.expiresAt)}
+                  onBlur={(e) =>
+                    save({ expiresAt: e.target.value === "" ? null : e.target.value })
                   }
                 />
               </div>

@@ -30,6 +30,7 @@ export interface UpdateMetadataInput {
   description?: string | null;
   altText?: string | null;
   tags?: string[];
+  expiresAt?: string | null;
 }
 
 export class AssetService {
@@ -114,6 +115,9 @@ export class AssetService {
           : {}),
         ...(input.altText !== undefined ? { altText: input.altText } : {}),
         ...(input.tags !== undefined ? { tags: JSON.stringify(input.tags) } : {}),
+        ...(input.expiresAt !== undefined
+          ? { expiresAt: this.parseExpiryDate(input.expiresAt) }
+          : {}),
       },
       include: { renditions: true },
     });
@@ -145,6 +149,28 @@ export class AssetService {
     return `assets/${assetId}/original`;
   }
 
+  private parseExpiryDate(value: string | null): Date | null {
+    if (value === null) return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) {
+      throw new AssetError("Expiry date must use YYYY-MM-DD format", 400);
+    }
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const expiresAt = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+    if (
+      expiresAt.getUTCFullYear() !== year ||
+      expiresAt.getUTCMonth() !== month - 1 ||
+      expiresAt.getUTCDate() !== day
+    ) {
+      throw new AssetError("Expiry date must be a valid calendar date", 400);
+    }
+
+    return expiresAt;
+  }
+
   private toDTO(asset: Asset, renditions: Rendition[]): AssetDTO {
     return {
       id: asset.id,
@@ -170,6 +196,7 @@ export class AssetService {
         sizeBytes: r.sizeBytes,
         url: this.storage.getUrl(r.storageKey),
       })),
+      expiresAt: asset.expiresAt?.toISOString() ?? null,
       createdAt: asset.createdAt.toISOString(),
       updatedAt: asset.updatedAt.toISOString(),
     };

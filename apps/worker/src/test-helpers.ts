@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,14 +13,26 @@ import {
 } from "@assetx/publishing";
 import type { WorkerDependencies } from "./dependencies.js";
 
-const schemaPath = join(
-  new URL(".", import.meta.url).pathname,
-  "..",
-  "..",
-  "api",
-  "prisma",
-  "schema.prisma",
-);
+const schemaStatements = [
+  `CREATE TABLE IF NOT EXISTS "User" ("id" TEXT NOT NULL PRIMARY KEY,"email" TEXT NOT NULL,"passwordHash" TEXT NOT NULL,"role" TEXT NOT NULL DEFAULT 'user',"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS "RefreshToken" ("id" TEXT NOT NULL PRIMARY KEY,"userId" TEXT NOT NULL,"tokenHash" TEXT NOT NULL,"expiresAt" DATETIME NOT NULL,"revokedAt" DATETIME,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS "Asset" ("id" TEXT NOT NULL PRIMARY KEY,"ownerId" TEXT NOT NULL,"originalName" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'pending',"checksum" TEXT NOT NULL,"width" INTEGER,"height" INTEGER,"format" TEXT NOT NULL,"sizeBytes" INTEGER NOT NULL,"title" TEXT,"description" TEXT,"altText" TEXT,"tags" TEXT NOT NULL DEFAULT '[]',"metadataSource" TEXT NOT NULL DEFAULT 'manual',"expiresAt" DATETIME,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL,CONSTRAINT "Asset_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS "Rendition" ("id" TEXT NOT NULL PRIMARY KEY,"assetId" TEXT NOT NULL,"name" TEXT NOT NULL,"storageKey" TEXT NOT NULL,"width" INTEGER NOT NULL,"height" INTEGER NOT NULL,"format" TEXT NOT NULL,"sizeBytes" INTEGER NOT NULL,CONSTRAINT "Rendition_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS "Publication" ("id" TEXT NOT NULL PRIMARY KEY,"assetId" TEXT NOT NULL,"channelId" TEXT NOT NULL,"status" TEXT NOT NULL,"reference" TEXT,"error" TEXT,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "Publication_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "RefreshToken_tokenHash_key" ON "RefreshToken"("tokenHash")`,
+  `CREATE INDEX IF NOT EXISTS "RefreshToken_userId_idx" ON "RefreshToken"("userId")`,
+  `CREATE INDEX IF NOT EXISTS "Asset_ownerId_idx" ON "Asset"("ownerId")`,
+  `CREATE INDEX IF NOT EXISTS "Rendition_assetId_idx" ON "Rendition"("assetId")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "Rendition_assetId_name_key" ON "Rendition"("assetId", "name")`,
+  `CREATE INDEX IF NOT EXISTS "Publication_assetId_idx" ON "Publication"("assetId")`,
+];
+
+async function applySchema(prisma: PrismaClient): Promise<void> {
+  for (const statement of schemaStatements) {
+    await prisma.$executeRawUnsafe(statement);
+  }
+}
 
 export interface WorkerTestContext {
   deps: WorkerDependencies;
@@ -33,14 +44,11 @@ export interface WorkerTestContext {
 
 export async function createWorkerTestContext(): Promise<WorkerTestContext> {
   const dir = await mkdtemp(join(tmpdir(), "assetx-worker-"));
-  const databaseUrl = `file:${join(dir, `test-${randomUUID()}.sqlite`)}`;
-
-  execSync(`pnpm exec prisma db push --skip-generate --schema "${schemaPath}"`, {
-    env: { ...process.env, DATABASE_URL: databaseUrl },
-    stdio: "ignore",
-  });
+  const dbName = `test-${randomUUID()}.sqlite`;
+  const databaseUrl = `file:./${dbName}`;
 
   const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+  await applySchema(prisma);
   const storage = new DiskStorageProvider({
     root: join(dir, "storage"),
     baseUrl: "http://localhost:3001/files",
@@ -74,6 +82,7 @@ export async function createWorkerTestContext(): Promise<WorkerTestContext> {
     },
     cleanup: async () => {
       await prisma.$disconnect();
+      await rm(join(process.cwd(), dbName), { force: true });
       await rm(dir, { recursive: true, force: true });
     },
   };

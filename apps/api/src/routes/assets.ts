@@ -9,6 +9,7 @@ const updateSchema = z.object({
   description: z.string().max(5000).nullable().optional(),
   altText: z.string().max(1000).nullable().optional(),
   tags: z.array(z.string().max(64)).max(50).optional(),
+  expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 
 function handleError(reply: import("fastify").FastifyReply, err: unknown) {

@@ -73,6 +73,7 @@ describe("POST /api/assets", () => {
     expect(body.status).toBe("pending");
     expect(body.ownerId).toBe(userId);
     expect(body.checksum).toMatch(/^[a-f0-9]{64}$/);
+    expect(body.expiresAt).toBeNull();
 
     // original persisted to storage
     expect(await ctx.deps.storage.exists(`assets/${body.id}/original`)).toBe(true);
@@ -160,6 +161,59 @@ describe("PATCH /api/assets/:id", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().title).toBe("My Title");
     expect(res.json().tags).toEqual(["a", "b"]);
+  });
+
+  it("sets an optional expiry date at UTC end-of-day", async () => {
+    const created = (await uploadImage(token)).json();
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { expiresAt: "2026-06-30" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().expiresAt).toBe("2026-06-30T23:59:59.999Z");
+  });
+
+  it("clears an expiry date", async () => {
+    const created = (await uploadImage(token)).json();
+    await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { expiresAt: "2026-06-30" },
+    });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { expiresAt: null },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().expiresAt).toBeNull();
+  });
+
+  it("rejects malformed expiry dates", async () => {
+    const created = (await uploadImage(token)).json();
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { expiresAt: "06/30/2026" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("rejects invalid calendar expiry dates", async () => {
+    const created = (await uploadImage(token)).json();
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { expiresAt: "2026-02-30" },
+    });
+    expect(res.statusCode).toBe(400);
   });
 });
 

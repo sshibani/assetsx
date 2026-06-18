@@ -106,7 +106,9 @@ export class ApiClient {
 
   async updateAsset(
     id: string,
-    data: Partial<Pick<AssetDTO, "title" | "description" | "altText" | "tags">>,
+    data: Partial<
+      Pick<AssetDTO, "title" | "description" | "altText" | "tags" | "expiresAt">
+    >,
   ): Promise<AssetDTO> {
     return this.request<AssetDTO>(`/api/assets/${id}`, {
       method: "PATCH",

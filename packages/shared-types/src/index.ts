@@ -55,6 +55,7 @@ export interface AssetDTO {
   tags: string[];
   metadataSource: MetadataSource;
   renditions: RenditionDTO[];
+  expiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
