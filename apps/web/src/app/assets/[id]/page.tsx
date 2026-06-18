@@ -271,10 +271,40 @@ export default function AssetDetailPage() {
               )}
             </div>
 
-            <div className="panel" style={{ marginTop: 20 }}>
-              <h3 className="section-title">Comments & activity</h3>
-            </div>
           </div>
+        </div>
+
+        <div className="panel" style={{ marginTop: 28 }}>
+          <h3 className="section-title">Comments & activity</h3>
+          <ul className="pub-list">
+            <li style={{ alignItems: "flex-start", flexDirection: "column" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+                Morgan added a comment · 2 hours ago
+              </span>
+              <span>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
+                posuere erat a ante venenatis dapibus.
+              </span>
+            </li>
+            <li style={{ alignItems: "flex-start", flexDirection: "column" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+                Riley updated asset details · Yesterday
+              </span>
+              <span>
+                Sed posuere consectetur est at lobortis. Donec ullamcorper nulla
+                non metus auctor fringilla.
+              </span>
+            </li>
+            <li style={{ alignItems: "flex-start", flexDirection: "column" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+                Alex reviewed this asset · 3 days ago
+              </span>
+              <span>
+                Cras mattis consectetur purus sit amet fermentum. Aenean lacinia
+                bibendum nulla sed consectetur.
+              </span>
+            </li>
+          </ul>
         </div>
       </main>
     </>
