@@ -32,8 +32,6 @@ export class WebhookChannel implements ChannelPublisher {
         id: asset.id,
         title: asset.title,
         description: asset.description,
-        altText: asset.altText,
-        tags: asset.tags,
         width: asset.width,
         height: asset.height,
         format: asset.format,

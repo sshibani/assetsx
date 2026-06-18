@@ -156,11 +156,13 @@ describe("PATCH /api/assets/:id", () => {
       method: "PATCH",
       url: `/api/assets/${created.id}`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { title: "My Title", tags: ["a", "b"] },
+      payload: { title: "My Title", description: "My Description" },
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().title).toBe("My Title");
-    expect(res.json().tags).toEqual(["a", "b"]);
+    expect(res.json().description).toBe("My Description");
+    expect(res.json()).not.toHaveProperty("altText");
+    expect(res.json()).not.toHaveProperty("tags");
   });
 
   it("sets an optional expiry date at UTC end-of-day", async () => {

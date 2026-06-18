@@ -4,8 +4,6 @@ export interface PublishableAsset {
   id: string;
   title: string | null;
   description: string | null;
-  altText: string | null;
-  tags: string[];
   width: number | null;
   height: number | null;
   format: string;

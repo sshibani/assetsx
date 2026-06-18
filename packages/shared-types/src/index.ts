@@ -51,8 +51,6 @@ export interface AssetDTO {
   sizeBytes: number;
   title: string | null;
   description: string | null;
-  altText: string | null;
-  tags: string[];
   metadataSource: MetadataSource;
   renditions: RenditionDTO[];
   expiresAt: string | null;

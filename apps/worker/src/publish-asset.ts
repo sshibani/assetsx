@@ -33,8 +33,6 @@ export async function publishAsset(
     id: asset.id,
     title: asset.title,
     description: asset.description,
-    altText: asset.altText,
-    tags: JSON.parse(asset.tags) as string[],
     width: asset.width,
     height: asset.height,
     format: asset.format,

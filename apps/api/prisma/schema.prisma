@@ -42,8 +42,6 @@ model Asset {
   sizeBytes      Int
   title          String?
   description    String?
-  altText        String?
-  tags           String        @default("[]") // JSON-encoded string[]
   metadataSource String        @default("manual") // manual | llm
   expiresAt      DateTime?
   createdAt      DateTime      @default(now())

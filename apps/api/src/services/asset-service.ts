@@ -28,8 +28,6 @@ export interface UploadInput {
 export interface UpdateMetadataInput {
   title?: string | null;
   description?: string | null;
-  altText?: string | null;
-  tags?: string[];
   expiresAt?: string | null;
 }
 
@@ -59,7 +57,6 @@ export class AssetService {
         checksum,
         format: detected.ext,
         sizeBytes: input.buffer.byteLength,
-        tags: "[]",
       },
     });
 
@@ -113,8 +110,6 @@ export class AssetService {
         ...(input.description !== undefined
           ? { description: input.description }
           : {}),
-        ...(input.altText !== undefined ? { altText: input.altText } : {}),
-        ...(input.tags !== undefined ? { tags: JSON.stringify(input.tags) } : {}),
         ...(input.expiresAt !== undefined
           ? { expiresAt: this.parseExpiryDate(input.expiresAt) }
           : {}),
@@ -184,8 +179,6 @@ export class AssetService {
       sizeBytes: asset.sizeBytes,
       title: asset.title,
       description: asset.description,
-      altText: asset.altText,
-      tags: JSON.parse(asset.tags) as string[],
       metadataSource: asset.metadataSource as AssetDTO["metadataSource"],
       renditions: renditions.map((r) => ({
         id: r.id,

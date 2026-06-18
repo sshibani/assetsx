@@ -105,7 +105,7 @@ export default function GalleryPage() {
                     <img
                       className="thumb"
                       src={thumb.url}
-                      alt={a.altText ?? a.originalName}
+                      alt={a.title ?? a.originalName}
                     />
                   ) : (
                     <div className="thumb placeholder">Processing…</div>

@@ -27,7 +27,6 @@ beforeEach(async () => {
       checksum: "abc",
       format: "png",
       sizeBytes: 10,
-      tags: "[]",
     },
   });
   assetId = asset.id;

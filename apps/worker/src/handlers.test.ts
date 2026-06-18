@@ -41,7 +41,6 @@ async function seedPendingAsset(): Promise<string> {
       checksum,
       format: "jpg",
       sizeBytes: image.byteLength,
-      tags: "[]",
     },
   });
   await ctx.storage.put(`assets/${asset.id}/original`, image, "image/jpeg");
@@ -90,7 +89,6 @@ describe("processAsset", () => {
         checksum: "abc",
         format: "jpg",
         sizeBytes: 1,
-        tags: "[]",
       },
     });
 

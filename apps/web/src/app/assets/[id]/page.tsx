@@ -126,7 +126,7 @@ export default function AssetDetailPage() {
                 <img
                   className="preview"
                   src={standard.url}
-                  alt={asset.altText ?? asset.originalName}
+                  alt={asset.title ?? asset.originalName}
                   style={{ border: "none", borderRadius: 0 }}
                 />
               )}
@@ -190,31 +190,6 @@ export default function AssetDetailPage() {
                   placeholder="Describe this asset…"
                   defaultValue={asset.description ?? ""}
                   onBlur={(e) => save({ description: e.target.value })}
-                />
-              </div>
-              <div className="field">
-                <label className="label">Alt text</label>
-                <input
-                  className="input"
-                  placeholder="Accessible description"
-                  defaultValue={asset.altText ?? ""}
-                  onBlur={(e) => save({ altText: e.target.value })}
-                />
-              </div>
-              <div className="field" style={{ marginBottom: 0 }}>
-                <label className="label">Tags (comma separated)</label>
-                <input
-                  className="input"
-                  placeholder="nature, sky, blue"
-                  defaultValue={asset.tags.join(", ")}
-                  onBlur={(e) =>
-                    save({
-                      tags: e.target.value
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter(Boolean),
-                    })
-                  }
                 />
               </div>
               <div className="field" style={{ marginTop: 18, marginBottom: 0 }}>

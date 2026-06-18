@@ -7,8 +7,6 @@ import type { AppDependencies } from "../dependencies.js";
 const updateSchema = z.object({
   title: z.string().max(255).nullable().optional(),
   description: z.string().max(5000).nullable().optional(),
-  altText: z.string().max(1000).nullable().optional(),
-  tags: z.array(z.string().max(64)).max(50).optional(),
   expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 

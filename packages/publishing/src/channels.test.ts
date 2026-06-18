@@ -8,8 +8,6 @@ const asset: PublishableAsset = {
   id: "asset-1",
   title: "Sunset",
   description: "A nice sunset",
-  altText: "sunset over the sea",
-  tags: ["nature", "sky"],
   width: 1920,
   height: 1080,
   format: "webp",
