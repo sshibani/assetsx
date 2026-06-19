@@ -9,6 +9,8 @@ export interface AppConfig {
     refreshSecret: string;
     accessTtl: string;
     refreshTtl: string;
+    issuer: string;
+    audience: string;
   };
   storage: {
     root: string;
@@ -45,6 +47,8 @@ export function loadConfig(): AppConfig {
       refreshSecret: required("JWT_REFRESH_SECRET", "dev-refresh-secret"),
       accessTtl: process.env.JWT_ACCESS_TTL ?? "15m",
       refreshTtl: process.env.JWT_REFRESH_TTL ?? "7d",
+      issuer: process.env.JWT_ISSUER ?? "assetx",
+      audience: process.env.JWT_AUDIENCE ?? "assetx-api",
     },
     storage: {
       root: resolveFromWorkspaceRoot(storageRoot),

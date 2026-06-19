@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerAccountRoutes } from "./routes/accounts.js";
 import { registerAssetRoutes } from "./routes/assets.js";
 import { registerPublishRoutes } from "./routes/publish.js";
 import type { AppDependencies } from "./dependencies.js";
@@ -33,6 +34,7 @@ export async function buildApp(
   app.get("/api/health", async () => ({ status: "ok" }));
 
   await registerAuthRoutes(app, deps);
+  await registerAccountRoutes(app, deps);
   await registerAssetRoutes(app, deps);
   await registerPublishRoutes(app, deps);
 

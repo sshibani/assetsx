@@ -14,6 +14,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
+    "accounts:backfill": "node --env-file=../../.env --import tsx prisma/backfill-accounts.ts",
     "db:seed": "node --import tsx prisma/seed.ts"
   },
   "dependencies": {

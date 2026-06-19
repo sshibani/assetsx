@@ -18,24 +18,38 @@ afterEach(async () => {
   await ctx.cleanup();
 });
 
-async function seedOwner(): Promise<string> {
+async function seedOwner(): Promise<{ userId: string; accountId: string }> {
   const user = await ctx.prisma.user.create({
     data: {
       email: `owner-${randomUUID()}@assetx.local`,
       passwordHash: "x",
-      role: "user",
+      globalRole: "user",
     },
   });
-  return user.id;
+  const account = await ctx.prisma.account.create({
+    data: {
+      name: `Account ${randomUUID()}`,
+      slug: `acct-${randomUUID()}`,
+    },
+  });
+  await ctx.prisma.accountMembership.create({
+    data: {
+      accountId: account.id,
+      userId: user.id,
+      role: "asset_manager",
+    },
+  });
+  return { userId: user.id, accountId: account.id };
 }
 
 async function seedPendingAsset(): Promise<string> {
-  const ownerId = await seedOwner();
+  const { userId, accountId } = await seedOwner();
   const image = await makeTestImage();
   const checksum = createHash("sha256").update(image).digest("hex");
   const asset = await ctx.prisma.asset.create({
     data: {
-      ownerId,
+      accountId,
+      ownerId: userId,
       originalName: "photo.jpg",
       status: "pending",
       checksum,
@@ -48,14 +62,15 @@ async function seedPendingAsset(): Promise<string> {
 }
 
 async function seedPendingPdfAsset(): Promise<string> {
-  const ownerId = await seedOwner();
+  const { userId, accountId } = await seedOwner();
   const pdf = Buffer.from(
     "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n",
   );
   const checksum = createHash("sha256").update(pdf).digest("hex");
   const asset = await ctx.prisma.asset.create({
     data: {
-      ownerId,
+      accountId,
+      ownerId: userId,
       originalName: "document.pdf",
       status: "pending",
       checksum,
@@ -117,10 +132,11 @@ describe("processAsset", () => {
   });
 
   it("marks the asset failed when the original is missing", async () => {
-    const ownerId = await seedOwner();
+    const { userId, accountId } = await seedOwner();
     const asset = await ctx.prisma.asset.create({
       data: {
-        ownerId,
+        accountId,
+        ownerId: userId,
         originalName: "x.jpg",
         status: "pending",
         checksum: "abc",

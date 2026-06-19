@@ -7,8 +7,77 @@ export type RenditionName = (typeof RENDITION_NAMES)[number];
 export const METADATA_SOURCES = ["manual", "llm"] as const;
 export type MetadataSource = (typeof METADATA_SOURCES)[number];
 
-export const USER_ROLES = ["admin", "user"] as const;
+export const USER_ROLES = ["super_user", "user"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
+
+export const GLOBAL_ROLES = USER_ROLES;
+export type GlobalRole = UserRole;
+
+export const ACCOUNT_ROLES = [
+  "account_owner",
+  "account_admin",
+  "asset_manager",
+  "asset_viewer",
+] as const;
+export type AccountRole = (typeof ACCOUNT_ROLES)[number];
+
+export const ACCOUNT_STATUSES = ["active", "disabled"] as const;
+export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
+
+export const MEMBERSHIP_STATUSES = ["active", "disabled"] as const;
+export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
+
+export const PERMISSIONS = [
+  "account:read",
+  "account:update",
+  "members:read",
+  "members:manage",
+  "assets:read",
+  "assets:create",
+  "assets:update",
+  "assets:delete",
+  "assets:publish",
+  "platform:manage",
+] as const;
+export type Permission = (typeof PERMISSIONS)[number];
+
+export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
+  account_owner: [
+    "account:read",
+    "account:update",
+    "members:read",
+    "members:manage",
+    "assets:read",
+    "assets:create",
+    "assets:update",
+    "assets:delete",
+    "assets:publish",
+  ],
+  account_admin: [
+    "account:read",
+    "account:update",
+    "members:read",
+    "members:manage",
+    "assets:read",
+    "assets:create",
+    "assets:update",
+    "assets:delete",
+    "assets:publish",
+  ],
+  asset_manager: [
+    "account:read",
+    "assets:read",
+    "assets:create",
+    "assets:update",
+    "assets:delete",
+    "assets:publish",
+  ],
+  asset_viewer: ["account:read", "assets:read"],
+};
+
+export function permissionsForAccountRole(role: AccountRole): Permission[] {
+  return ACCOUNT_ROLE_PERMISSIONS[role];
+}
 
 export const PUBLICATION_STATUSES = ["success", "failed"] as const;
 export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number];
@@ -42,6 +111,7 @@ export interface RenditionDTO {
 
 export interface AssetDTO {
   id: string;
+  accountId: string;
   ownerId: string;
   originalName: string;
   status: AssetStatus;
@@ -60,6 +130,32 @@ export interface AssetDTO {
   updatedAt: string;
 }
 
+export interface AccountDTO {
+  id: string;
+  name: string;
+  slug: string;
+  status: AccountStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountMembershipDTO {
+  id: string;
+  accountId: string;
+  userId: string;
+  email: string;
+  role: AccountRole;
+  status: MembershipStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthAccountContext {
+  account: AccountDTO;
+  membership: AccountMembershipDTO;
+  permissions: Permission[];
+}
+
 export interface PublicationDTO {
   id: string;
   assetId: string;
@@ -73,11 +169,14 @@ export interface PublicationDTO {
 export interface UserDTO {
   id: string;
   email: string;
-  role: UserRole;
+  globalRole: GlobalRole;
   createdAt: string;
 }
 
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  user?: UserDTO;
+  activeAccount?: AuthAccountContext | null;
+  accounts?: AuthAccountContext[];
 }

@@ -10,28 +10,77 @@ datasource db {
 model User {
   id           String         @id @default(uuid())
   email        String         @unique
-  passwordHash String
-  role         String         @default("user") // admin | user
+  passwordHash String?
+  globalRole   String         @default("user") // super_user | user
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  memberships  AccountMembership[]
+  identities   UserIdentity[]
   assets       Asset[]
   refreshTokens RefreshToken[]
 }
 
-model RefreshToken {
-  id        String    @id @default(uuid())
+model Account {
+  id          String              @id @default(uuid())
+  name        String
+  slug        String              @unique
+  status      String              @default("active") // active | disabled
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  memberships AccountMembership[]
+  assets      Asset[]
+}
+
+model UserIdentity {
+  id              String   @id @default(uuid())
+  userId          String
+  provider        String
+  providerSubject String
+  email           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject])
+  @@index([userId])
+}
+
+model AccountMembership {
+  id        String   @id @default(uuid())
+  accountId String
   userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   // account_owner | account_admin | asset_manager | asset_viewer
+  status    String   @default("active") // active | disabled
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, userId])
+  @@index([userId])
+  @@index([accountId])
+}
+
+model RefreshToken {
+  id               String    @id @default(uuid())
+  userId           String
+  accountId        String?
+  sessionId        String
+  identityProvider String    @default("local")
+  tokenHash        String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([accountId])
+  @@index([sessionId])
 }
 
 model Asset {
   id             String        @id @default(uuid())
+  accountId      String
   ownerId        String
   originalName   String
   status         String        @default("pending") // pending | processing | ready | failed
@@ -46,10 +95,13 @@ model Asset {
   expiresAt      DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  account        Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
   owner          User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   renditions     Rendition[]
   publications   Publication[]
 
+  @@index([accountId])
+  @@index([accountId, createdAt])
   @@index([ownerId])
 }
 

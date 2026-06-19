@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AssetService, AssetError } from "../services/asset-service.js";
 import { makeAuthGuard } from "../auth-guard.js";
 import type { AppDependencies } from "../dependencies.js";
+import { hasPermission } from "../authorization.js";
 
 const updateSchema = z.object({
   title: z.string().max(255).nullable().optional(),
@@ -22,7 +23,7 @@ export async function registerAssetRoutes(
   deps: AppDependencies,
 ): Promise<void> {
   const service = new AssetService(deps.prisma, deps.storage, deps.queue);
-  const authGuard = makeAuthGuard(deps.tokens);
+  const authGuard = makeAuthGuard(deps.tokens, deps.prisma);
 
   app.post("/api/assets", { preHandler: authGuard }, async (request, reply) => {
     const file = await request.file();
@@ -31,7 +32,11 @@ export async function registerAssetRoutes(
     }
     const buffer = await file.toBuffer();
     try {
+      if (!request.user!.accountId || !hasPermission(request.user!, "assets:create")) {
+        return reply.code(403).send({ error: "Forbidden" });
+      }
       const asset = await service.upload({
+        accountId: request.user!.accountId,
         ownerId: request.user!.id,
         originalName: file.filename,
         buffer,

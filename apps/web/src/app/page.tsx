@@ -15,12 +15,21 @@ function isPdf(asset: AssetDTO): boolean {
 }
 
 export default function GalleryPage() {
-  const { client, isAuthenticated, logout } = useAuth();
+  const {
+    client,
+    isAuthenticated,
+    logout,
+    accounts,
+    activeAccount,
+    permissions,
+    switchAccount,
+  } = useAuth();
   const router = useRouter();
   const [assets, setAssets] = useState<AssetDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const canUpload = permissions.includes("assets:create");
 
   const refresh = async () => {
     const { items } = await client.listAssets();
@@ -39,7 +48,7 @@ export default function GalleryPage() {
     }, 50);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  }, [isAuthenticated, activeAccount?.account.id]);
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,9 +71,23 @@ export default function GalleryPage() {
           AssetX
         </div>
         <div className="appbar-actions">
+          {accounts.length > 0 && (
+            <select
+              className="input account-select"
+              value={activeAccount?.account.id ?? ""}
+              onChange={(e) => switchAccount(e.target.value)}
+              aria-label="Active account"
+            >
+              {accounts.map((ctx) => (
+                <option key={ctx.account.id} value={ctx.account.id}>
+                  {ctx.account.name}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             className="btn"
-            disabled={uploading}
+            disabled={uploading || !canUpload}
             onClick={() => fileInput.current?.click()}
           >
             <span aria-hidden>＋</span>
@@ -97,7 +120,7 @@ export default function GalleryPage() {
             <p>Upload your first image or PDF to get started.</p>
             <button
               className="btn"
-              disabled={uploading}
+              disabled={uploading || !canUpload}
               onClick={() => fileInput.current?.click()}
             >
               {uploading ? "Uploading…" : "Upload asset"}

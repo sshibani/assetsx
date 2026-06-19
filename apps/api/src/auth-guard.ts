@@ -1,11 +1,9 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
+import type { PrismaClient } from "@prisma/client";
 import type { TokenService } from "@assetx/auth";
-import type { UserRole } from "@assetx/shared-types";
-
-export interface AuthUser {
-  id: string;
-  role: UserRole;
-}
+import type { AccountRole, GlobalRole, Permission } from "@assetx/shared-types";
+import type { AuthUser } from "./authorization.js";
+export type { AuthUser } from "./authorization.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -14,7 +12,7 @@ declare module "fastify" {
 }
 
 /** Extracts and verifies a Bearer access token; 401 on failure. */
-export function makeAuthGuard(tokens: TokenService) {
+export function makeAuthGuard(tokens: TokenService, prisma?: PrismaClient) {
   return async function authGuard(
     request: FastifyRequest,
     reply: FastifyReply,
@@ -27,7 +25,45 @@ export function makeAuthGuard(tokens: TokenService) {
     const token = header.slice("Bearer ".length);
     try {
       const decoded = tokens.verifyAccessToken(token);
-      request.user = { id: decoded.sub, role: decoded.role };
+      if (prisma) {
+        const user = await prisma.user.findUnique({
+          where: { id: decoded.sub },
+          select: { id: true, globalRole: true },
+        });
+        if (!user) {
+          await reply.code(401).send({ error: "Invalid or expired token" });
+          return;
+        }
+        if (decoded.accountId) {
+          const membership = await prisma.accountMembership.findUnique({
+            where: {
+              accountId_userId: {
+                accountId: decoded.accountId,
+                userId: decoded.sub,
+              },
+            },
+            include: { account: true },
+          });
+          if (
+            user.globalRole !== "super_user" &&
+            (!membership ||
+              membership.status !== "active" ||
+              membership.account.status !== "active")
+          ) {
+            await reply.code(401).send({ error: "Invalid or expired token" });
+            return;
+          }
+        }
+      }
+      request.user = {
+        id: decoded.sub,
+        globalRole: decoded.globalRole as GlobalRole,
+        accountId: decoded.accountId,
+        accountRole: decoded.accountRole as AccountRole | null,
+        permissions: decoded.permissions as Permission[],
+        identityProvider: decoded.identityProvider,
+        sessionId: decoded.sessionId,
+      };
     } catch {
       await reply.code(401).send({ error: "Invalid or expired token" });
     }

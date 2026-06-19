@@ -24,7 +24,7 @@ export async function registerPublishRoutes(
   deps: AppDependencies,
 ): Promise<void> {
   const service = new PublishService(deps.prisma, deps.queue, deps.channels);
-  const authGuard = makeAuthGuard(deps.tokens);
+  const authGuard = makeAuthGuard(deps.tokens, deps.prisma);
 
   app.get("/api/channels", { preHandler: authGuard }, async (_request, reply) => {
     return reply.send({ items: service.listChannels() });

@@ -4,21 +4,53 @@ import { hashPassword } from "@assetx/auth";
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
-  const email = process.env.ADMIN_EMAIL ?? "admin@assetx.local";
-  const password = process.env.ADMIN_PASSWORD ?? "admin12345";
+  const email =
+    process.env.SUPER_USER_EMAIL ??
+    process.env.ADMIN_EMAIL ??
+    "admin@assetx.local";
+  const password =
+    process.env.SUPER_USER_PASSWORD ??
+    process.env.ADMIN_PASSWORD ??
+    "admin12345";
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { globalRole: "super_user" },
+    });
     // eslint-disable-next-line no-console
-    console.log(`Admin ${email} already exists, skipping.`);
+    console.log(`Super user ${email} already exists, promoted if needed.`);
     return;
   }
 
   await prisma.user.create({
-    data: { email, passwordHash: await hashPassword(password), role: "admin" },
+    data: {
+      email,
+      passwordHash: await hashPassword(password),
+      globalRole: "super_user",
+      identities: {
+        create: {
+          provider: "local",
+          providerSubject: email.toLowerCase(),
+          email,
+        },
+      },
+      memberships: {
+        create: {
+          role: "account_owner",
+          account: {
+            create: {
+              name: "Default",
+              slug: "default",
+            },
+          },
+        },
+      },
+    },
   });
   // eslint-disable-next-line no-console
-  console.log(`Seeded admin user: ${email}`);
+  console.log(`Seeded super user: ${email}`);
 }
 
 main()

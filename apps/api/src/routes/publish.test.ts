@@ -11,6 +11,7 @@ let ctx: TestContext;
 let app: FastifyInstance;
 let token: string;
 let userId: string;
+let accountId: string;
 let assetId: string;
 
 beforeEach(async () => {
@@ -19,8 +20,10 @@ beforeEach(async () => {
   const auth = await createUserWithToken(ctx);
   token = auth.accessToken;
   userId = auth.userId;
+  accountId = auth.accountId!;
   const asset = await ctx.prisma.asset.create({
     data: {
+      accountId,
       ownerId: userId,
       originalName: "x.png",
       status: "ready",

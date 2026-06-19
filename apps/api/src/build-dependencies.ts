@@ -20,6 +20,8 @@ export function buildDependencies(config: AppConfig): AppDependencies {
     refreshSecret: config.jwt.refreshSecret,
     accessTtl: config.jwt.accessTtl as `${number}m`,
     refreshTtl: config.jwt.refreshTtl as `${number}d`,
+    issuer: config.jwt.issuer,
+    audience: config.jwt.audience,
   });
 
   const storage = new DiskStorageProvider({

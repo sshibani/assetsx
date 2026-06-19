@@ -6,16 +6,33 @@ const service = new TokenService({
   refreshSecret: "refresh-secret-test",
   accessTtl: "15m",
   refreshTtl: "7d",
+  issuer: "assetx-test",
+  audience: "assetx-api-test",
 });
 
-const claims = { sub: "user-1", role: "admin" as const };
+const claims = {
+  sub: "user-1",
+  globalRole: "user" as const,
+  accountId: "account-1",
+  accountRole: "asset_manager" as const,
+  permissions: ["assets:read", "assets:create"] as const,
+  identityProvider: "local",
+  sessionId: "session-1",
+  authTime: 123,
+};
 
 describe("TokenService access tokens", () => {
   it("signs and verifies an access token round-trip", () => {
     const token = service.signAccessToken(claims);
     const decoded = service.verifyAccessToken(token);
     expect(decoded.sub).toBe("user-1");
-    expect(decoded.role).toBe("admin");
+    expect(decoded.globalRole).toBe("user");
+    expect(decoded.accountId).toBe("account-1");
+    expect(decoded.accountRole).toBe("asset_manager");
+    expect(decoded.permissions).toContain("assets:create");
+    expect(decoded.identityProvider).toBe("local");
+    expect(decoded.iss).toBe("assetx-test");
+    expect(decoded.aud).toBe("assetx-api-test");
   });
 
   it("rejects an access token verified with the refresh path", () => {
@@ -33,6 +50,7 @@ describe("TokenService refresh tokens", () => {
     const token = service.signRefreshToken(claims);
     const decoded = service.verifyRefreshToken(token);
     expect(decoded.sub).toBe("user-1");
+    expect(decoded.sessionId).toBe("session-1");
   });
 
   it("does not accept a refresh token on the access path", () => {

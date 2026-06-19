@@ -1,7 +1,9 @@
 import type {
+  AuthAccountContext,
   AssetDTO,
   AuthTokens,
   ChannelInfoLike,
+  UserDTO,
   PublicationDTO,
 } from "./types";
 
@@ -79,10 +81,26 @@ export class ApiClient {
     return tokens;
   }
 
+  async switchAccount(accountId: string): Promise<AuthTokens> {
+    const tokens = await this.request<AuthTokens>("/api/auth/switch-account", {
+      method: "POST",
+      body: { accountId },
+    });
+    this.setAccessToken(tokens.accessToken);
+    return tokens;
+  }
+
   async me() {
-    return this.request<{ id: string; email: string; role: string }>(
-      "/api/auth/me",
-    );
+    return this.request<
+      UserDTO & {
+        activeAccount: string | null;
+        accounts: AuthAccountContext[];
+      }
+    >("/api/auth/me");
+  }
+
+  async listAccounts(): Promise<{ items: AuthAccountContext["account"][] }> {
+    return this.request<{ items: AuthAccountContext["account"][] }>("/api/accounts");
   }
 
   // --- Assets ---

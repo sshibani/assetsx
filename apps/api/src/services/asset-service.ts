@@ -8,7 +8,8 @@ import {
   type AssetDTO,
   type RenditionName,
 } from "@assetx/shared-types";
-import type { AuthUser } from "../auth-guard.js";
+import type { AuthUser } from "../authorization.js";
+import { hasPermission, isSuperUser } from "../authorization.js";
 
 export class AssetError extends Error {
   constructor(
@@ -20,6 +21,7 @@ export class AssetError extends Error {
 }
 
 export interface UploadInput {
+  accountId: string;
   ownerId: string;
   originalName: string;
   buffer: Buffer;
@@ -51,6 +53,7 @@ export class AssetService {
 
     const asset = await this.prisma.asset.create({
       data: {
+        accountId: input.accountId,
         ownerId: input.ownerId,
         originalName: input.originalName,
         status: "pending",
@@ -75,7 +78,13 @@ export class AssetService {
   }
 
   async list(user: AuthUser): Promise<AssetDTO[]> {
-    const where = user.role === "admin" ? {} : { ownerId: user.id };
+    if (!hasPermission(user, "assets:read")) {
+      throw new AssetError("Forbidden", 403);
+    }
+    const where =
+      isSuperUser(user) && !user.accountId
+        ? {}
+        : { accountId: this.requireAccount(user) };
     const assets = await this.prisma.asset.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -90,7 +99,7 @@ export class AssetService {
       include: { renditions: true },
     });
     if (!asset) throw new AssetError("Asset not found", 404);
-    this.assertOwner(asset, user);
+    this.assertCanAccessAsset(asset, user, "assets:read");
     return this.toDTO(asset, asset.renditions);
   }
 
@@ -101,7 +110,7 @@ export class AssetService {
   ): Promise<AssetDTO> {
     const asset = await this.prisma.asset.findUnique({ where: { id } });
     if (!asset) throw new AssetError("Asset not found", 404);
-    this.assertOwner(asset, user);
+    this.assertCanAccessAsset(asset, user, "assets:update");
 
     const updated = await this.prisma.asset.update({
       where: { id },
@@ -125,7 +134,7 @@ export class AssetService {
       include: { renditions: true },
     });
     if (!asset) throw new AssetError("Asset not found", 404);
-    this.assertOwner(asset, user);
+    this.assertCanAccessAsset(asset, user, "assets:delete");
 
     for (const rendition of asset.renditions) {
       await this.storage.delete(rendition.storageKey);
@@ -134,8 +143,22 @@ export class AssetService {
     await this.prisma.asset.delete({ where: { id } });
   }
 
-  private assertOwner(asset: { ownerId: string }, user: AuthUser): void {
-    if (user.role !== "admin" && asset.ownerId !== user.id) {
+  private requireAccount(user: AuthUser): string {
+    if (!user.accountId) {
+      throw new AssetError("Account context required", 400);
+    }
+    return user.accountId;
+  }
+
+  private assertCanAccessAsset(
+    asset: { accountId: string },
+    user: AuthUser,
+    permission: Parameters<typeof hasPermission>[1],
+  ): void {
+    if (!hasPermission(user, permission)) {
+      throw new AssetError("Forbidden", 403);
+    }
+    if (!isSuperUser(user) && asset.accountId !== user.accountId) {
       throw new AssetError("Forbidden", 403);
     }
   }
@@ -169,6 +192,7 @@ export class AssetService {
   private toDTO(asset: Asset, renditions: Rendition[]): AssetDTO {
     return {
       id: asset.id,
+      accountId: asset.accountId,
       ownerId: asset.ownerId,
       originalName: asset.originalName,
       status: asset.status as AssetDTO["status"],

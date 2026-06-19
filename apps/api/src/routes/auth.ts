@@ -13,12 +13,16 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
 
+const switchAccountSchema = z.object({
+  accountId: z.string().uuid(),
+});
+
 export async function registerAuthRoutes(
   app: FastifyInstance,
   deps: AppDependencies,
 ): Promise<void> {
   const service = new AuthService(deps.prisma, deps.tokens);
-  const authGuard = makeAuthGuard(deps.tokens);
+  const authGuard = makeAuthGuard(deps.tokens, deps.prisma);
 
   app.post("/api/auth/register", async (request, reply) => {
     const parsed = credentialsSchema.safeParse(request.body);
@@ -72,6 +76,27 @@ export async function registerAuthRoutes(
   });
 
   app.post(
+    "/api/auth/switch-account",
+    { preHandler: authGuard },
+    async (request, reply) => {
+      const parsed = switchAccountSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.flatten() });
+      }
+      try {
+        return reply.send(
+          await service.switchAccount(request.user!.id, parsed.data.accountId),
+        );
+      } catch (err) {
+        if (err instanceof AuthError) {
+          return reply.code(err.statusCode).send({ error: err.message });
+        }
+        throw err;
+      }
+    },
+  );
+
+  app.post(
     "/api/auth/logout",
     { preHandler: authGuard },
     async (request, reply) => {
@@ -86,6 +111,7 @@ export async function registerAuthRoutes(
   app.get("/api/auth/me", { preHandler: authGuard }, async (request, reply) => {
     const user = await deps.prisma.user.findUnique({
       where: { id: request.user!.id },
+      include: { memberships: { include: { account: true } } },
     });
     if (!user) {
       return reply.code(404).send({ error: "User not found" });
@@ -93,8 +119,32 @@ export async function registerAuthRoutes(
     return reply.send({
       id: user.id,
       email: user.email,
-      role: user.role,
+      globalRole: user.globalRole,
       createdAt: user.createdAt.toISOString(),
+      activeAccount: request.user!.accountId,
+      accounts: user.memberships
+        .filter((m) => m.status === "active" && m.account.status === "active")
+        .map((m) => ({
+          account: {
+            id: m.account.id,
+            name: m.account.name,
+            slug: m.account.slug,
+            status: m.account.status,
+            createdAt: m.account.createdAt.toISOString(),
+            updatedAt: m.account.updatedAt.toISOString(),
+          },
+          membership: {
+            id: m.id,
+            accountId: m.accountId,
+            userId: m.userId,
+            email: user.email,
+            role: m.role,
+            status: m.status,
+            createdAt: m.createdAt.toISOString(),
+            updatedAt: m.updatedAt.toISOString(),
+          },
+          permissions: request.user!.permissions,
+        })),
     });
   });
 }

@@ -37,7 +37,7 @@ function isPdf(asset: AssetDTO): boolean {
 }
 
 export default function AssetDetailPage() {
-  const { client } = useAuth();
+  const { client, permissions } = useAuth();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -47,6 +47,9 @@ export default function AssetDetailPage() {
   const [publications, setPublications] = useState<PublicationDTO[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
+  const canUpdate = permissions.includes("assets:update");
+  const canDelete = permissions.includes("assets:delete");
+  const canPublish = permissions.includes("assets:publish");
 
   const load = async () => {
     const [a, ch, pubs] = await Promise.all([
@@ -72,6 +75,7 @@ export default function AssetDetailPage() {
   }, [id]);
 
   const save = async (data: Partial<AssetDTO>) => {
+    if (!canUpdate) return;
     const updated = await client.updateAsset(id, data);
     setAsset(updated);
     setSaved(true);
@@ -79,12 +83,13 @@ export default function AssetDetailPage() {
   };
 
   const publish = async () => {
-    if (selected.length === 0) return;
+    if (selected.length === 0 || !canPublish) return;
     await client.publish(id, selected);
     setTimeout(load, 600);
   };
 
   const remove = async () => {
+    if (!canDelete) return;
     if (!confirm("Delete this asset and all its renditions?")) return;
     await client.deleteAsset(id);
     router.push("/");
@@ -116,7 +121,7 @@ export default function AssetDetailPage() {
               Saved
             </span>
           )}
-          <button className="btn danger" onClick={remove}>
+          <button className="btn danger" onClick={remove} disabled={!canDelete}>
             Delete
           </button>
         </div>
@@ -215,6 +220,7 @@ export default function AssetDetailPage() {
                   className="input"
                   placeholder="Untitled"
                   defaultValue={asset.title ?? ""}
+                  disabled={!canUpdate}
                   onBlur={(e) => save({ title: e.target.value })}
                 />
               </div>
@@ -224,6 +230,7 @@ export default function AssetDetailPage() {
                   className="textarea"
                   placeholder="Describe this asset…"
                   defaultValue={asset.description ?? ""}
+                  disabled={!canUpdate}
                   onBlur={(e) => save({ description: e.target.value })}
                 />
               </div>
@@ -233,6 +240,7 @@ export default function AssetDetailPage() {
                   className="input"
                   type="date"
                   defaultValue={expiryInputValue(asset.expiresAt)}
+                  disabled={!canUpdate}
                   onBlur={(e) =>
                     save({ expiresAt: e.target.value === "" ? null : e.target.value })
                   }
@@ -247,6 +255,7 @@ export default function AssetDetailPage() {
                   <input
                     type="checkbox"
                     checked={selected.includes(c.id)}
+                    disabled={!canPublish}
                     onChange={(e) =>
                       setSelected((s) =>
                         e.target.checked
@@ -261,7 +270,7 @@ export default function AssetDetailPage() {
               <button
                 className="btn block"
                 onClick={publish}
-                disabled={selected.length === 0}
+                disabled={selected.length === 0 || !canPublish}
                 style={{ marginTop: 8 }}
               >
                 Publish to {selected.length || "0"} channel

@@ -101,6 +101,14 @@ h3 {
   align-items: center;
 }
 
+.account-select {
+  width: auto;
+  min-width: 180px;
+  max-width: 260px;
+  min-height: 44px;
+  font-size: 14px;
+}
+
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex;

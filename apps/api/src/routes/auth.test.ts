@@ -10,12 +10,22 @@ let app: FastifyInstance;
 beforeEach(async () => {
   ctx = await createTestContext();
   app = await buildApp(ctx.deps);
-  // Seed an admin user used by several tests.
-  await ctx.prisma.user.create({
+  // Seed a super user with an account used by several tests.
+  const user = await ctx.prisma.user.create({
     data: {
       email: "admin@assetx.local",
       passwordHash: await hashPassword("admin12345"),
-      role: "admin",
+      globalRole: "super_user",
+    },
+  });
+  const account = await ctx.prisma.account.create({
+    data: { name: "Admin Account", slug: "admin-account" },
+  });
+  await ctx.prisma.accountMembership.create({
+    data: {
+      accountId: account.id,
+      userId: user.id,
+      role: "account_owner",
     },
   });
 });
@@ -36,6 +46,8 @@ describe("POST /api/auth/login", () => {
     const body = res.json();
     expect(body.accessToken).toBeTruthy();
     expect(body.refreshToken).toBeTruthy();
+    expect(body.user.globalRole).toBe("super_user");
+    expect(body.accounts).toHaveLength(1);
   });
 
   it("rejects invalid credentials with 401", async () => {
@@ -73,6 +85,7 @@ describe("GET /api/auth/me", () => {
     });
     expect(res.statusCode).toBe(200);
     expect(res.json().email).toBe("admin@assetx.local");
+    expect(res.json().globalRole).toBe("super_user");
   });
 
   it("rejects requests without a token", async () => {
