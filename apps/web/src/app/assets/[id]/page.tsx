@@ -176,13 +176,13 @@ export default function AssetDetailPage() {
               <h3 className="section-title">Metadata</h3>
               <div className="field">
                 <label className="label">Asset GUID</label>
-                <div className="input" aria-readonly="true">
+                <div className="readonly-value" aria-readonly="true">
                   {asset.id}
                 </div>
               </div>
               <div className="field">
                 <label className="label">Original filename</label>
-                <div className="input" aria-readonly="true">
+                <div className="readonly-value" aria-readonly="true">
                   {asset.originalName}
                 </div>
               </div>
