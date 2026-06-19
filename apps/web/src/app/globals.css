@@ -330,6 +330,36 @@ h3 {
   background: var(--surface-2);
 }
 
+.pdf-preview {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 32px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.pdf-preview > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pdf-icon {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 96px;
+  border: 1px solid #f5c2c2;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .kv {
   display: flex;
   flex-wrap: wrap;

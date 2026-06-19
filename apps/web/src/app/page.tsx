@@ -10,6 +10,10 @@ function isExpired(value: string | null): boolean {
   return value !== null && new Date(value).getTime() < Date.now();
 }
 
+function isPdf(asset: AssetDTO): boolean {
+  return asset.format.toLowerCase() === "pdf";
+}
+
 export default function GalleryPage() {
   const { client, isAuthenticated, logout } = useAuth();
   const router = useRouter();
@@ -65,7 +69,7 @@ export default function GalleryPage() {
           >
             <span aria-hidden>＋</span>
             <span className="btn-label">
-              {uploading ? "Uploading…" : "Upload image"}
+              {uploading ? "Uploading…" : "Upload asset"}
             </span>
           </button>
           <button className="btn secondary" onClick={logout}>
@@ -74,7 +78,7 @@ export default function GalleryPage() {
           <input
             ref={fileInput}
             type="file"
-            accept="image/*"
+            accept="image/*,application/pdf"
             hidden
             onChange={onUpload}
           />
@@ -90,13 +94,13 @@ export default function GalleryPage() {
         ) : assets.length === 0 ? (
           <div className="center-state">
             <h2>No assets yet</h2>
-            <p>Upload your first image to get started.</p>
+            <p>Upload your first image or PDF to get started.</p>
             <button
               className="btn"
               disabled={uploading}
               onClick={() => fileInput.current?.click()}
             >
-              {uploading ? "Uploading…" : "Upload image"}
+              {uploading ? "Uploading…" : "Upload asset"}
             </button>
           </div>
         ) : (
@@ -104,9 +108,12 @@ export default function GalleryPage() {
             {assets.map((a) => {
               const thumb = a.renditions.find((r) => r.name === "thumb");
               const expired = isExpired(a.expiresAt);
+              const pdf = isPdf(a);
               return (
                 <Link key={a.id} href={`/assets/${a.id}`} className="card">
-                  {thumb ? (
+                  {pdf && !thumb ? (
+                    <div className="thumb placeholder">PDF document</div>
+                  ) : thumb ? (
                     <img
                       className="thumb"
                       src={thumb.url}
@@ -119,6 +126,7 @@ export default function GalleryPage() {
                     <div className="title">{a.title ?? a.originalName}</div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <span className={`badge ${a.status}`}>{a.status}</span>
+                      {pdf && <span className="badge">PDF</span>}
                       {expired && <span className="badge failed">Expired</span>}
                     </div>
                   </div>

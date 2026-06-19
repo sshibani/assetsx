@@ -35,6 +35,7 @@ export class WebhookChannel implements ChannelPublisher {
         width: asset.width,
         height: asset.height,
         format: asset.format,
+        originalUrl: asset.originalUrl,
         renditions: asset.renditions,
       },
       publishedAt: new Date().toISOString(),

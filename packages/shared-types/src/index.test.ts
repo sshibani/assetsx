@@ -15,9 +15,10 @@ describe("shared-types constants", () => {
     expect(RENDITION_NAMES).toEqual(["thumb", "standard", "large", "original"]);
   });
 
-  it("supports the expected image mime types", () => {
+  it("supports the expected asset mime types", () => {
     expect(SUPPORTED_MIME_TYPES).toContain("image/jpeg");
     expect(SUPPORTED_MIME_TYPES).toContain("image/webp");
+    expect(SUPPORTED_MIME_TYPES).toContain("application/pdf");
   });
 
   it("defines admin and user roles", () => {

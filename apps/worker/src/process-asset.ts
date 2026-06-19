@@ -34,6 +34,14 @@ export async function processAsset(
     const originalKey = `assets/${assetId}/original`;
     const original = await streamToBuffer(await deps.storage.get(originalKey));
 
+    if (asset.format === "pdf") {
+      await deps.prisma.asset.update({
+        where: { id: assetId },
+        data: { status: "ready", width: null, height: null, format: "pdf" },
+      });
+      return;
+    }
+
     const info = await deps.processor.inspect(original);
     const renditions = await deps.processor.process(original, DEFAULT_RENDITIONS);
 

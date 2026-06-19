@@ -60,6 +60,12 @@ async function uploadImage(
   return injectMultipart(accessToken, image, filename, contentType);
 }
 
+function makeTestPdf(): Buffer {
+  return Buffer.from(
+    "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n",
+  );
+}
+
 describe("POST /api/assets", () => {
   it("requires authentication", async () => {
     const res = await app.inject({ method: "POST", url: "/api/assets" });
@@ -74,6 +80,7 @@ describe("POST /api/assets", () => {
     expect(body.ownerId).toBe(userId);
     expect(body.checksum).toMatch(/^[a-f0-9]{64}$/);
     expect(body.expiresAt).toBeNull();
+    expect(body.originalUrl).toContain(`/files/assets/${body.id}/original`);
 
     // original persisted to storage
     expect(await ctx.deps.storage.exists(`assets/${body.id}/original`)).toBe(true);
@@ -84,7 +91,29 @@ describe("POST /api/assets", () => {
     ]);
   });
 
-  it("rejects a non-image file (magic-byte check)", async () => {
+  it("uploads a PDF, persists it as pending and enqueues processing", async () => {
+    const res = await injectMultipart(
+      token,
+      makeTestPdf(),
+      "document.pdf",
+      "application/pdf",
+    );
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.status).toBe("pending");
+    expect(body.originalName).toBe("document.pdf");
+    expect(body.format).toBe("pdf");
+    expect(body.width).toBeNull();
+    expect(body.height).toBeNull();
+    expect(body.renditions).toEqual([]);
+    expect(body.originalUrl).toContain(`/files/assets/${body.id}/original`);
+    expect(await ctx.deps.storage.exists(`assets/${body.id}/original`)).toBe(true);
+    expect(ctx.queue.jobs("assets")).toEqual([
+      { type: "process-asset", assetId: body.id },
+    ]);
+  });
+
+  it("rejects an unsupported file (magic-byte check)", async () => {
     const res = await injectMultipart(
       token,
       Buffer.from("not an image"),

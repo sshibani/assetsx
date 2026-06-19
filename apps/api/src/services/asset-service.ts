@@ -189,6 +189,7 @@ export class AssetService {
         sizeBytes: r.sizeBytes,
         url: this.storage.getUrl(r.storageKey),
       })),
+      originalUrl: this.storage.getUrl(this.originalKey(asset.id)),
       expiresAt: asset.expiresAt?.toISOString() ?? null,
       createdAt: asset.createdAt.toISOString(),
       updatedAt: asset.updatedAt.toISOString(),

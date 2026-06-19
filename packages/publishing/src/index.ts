@@ -2,6 +2,7 @@ export type {
   ChannelPublisher,
   ChannelInfo,
   PublishableAsset,
+  PublishableRenditions,
   PublishResult,
 } from "./types.js";
 export { LocalPublicChannel } from "./local-public-channel.js";

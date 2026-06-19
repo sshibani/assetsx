@@ -47,6 +47,26 @@ async function seedPendingAsset(): Promise<string> {
   return asset.id;
 }
 
+async function seedPendingPdfAsset(): Promise<string> {
+  const ownerId = await seedOwner();
+  const pdf = Buffer.from(
+    "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n",
+  );
+  const checksum = createHash("sha256").update(pdf).digest("hex");
+  const asset = await ctx.prisma.asset.create({
+    data: {
+      ownerId,
+      originalName: "document.pdf",
+      status: "pending",
+      checksum,
+      format: "pdf",
+      sizeBytes: pdf.byteLength,
+    },
+  });
+  await ctx.storage.put(`assets/${asset.id}/original`, pdf, "application/pdf");
+  return asset.id;
+}
+
 describe("processAsset", () => {
   it("creates all renditions and marks the asset ready", async () => {
     const assetId = await seedPendingAsset();
@@ -77,6 +97,23 @@ describe("processAsset", () => {
 
     const count = await ctx.prisma.rendition.count({ where: { assetId } });
     expect(count).toBe(4);
+  });
+
+  it("marks PDF assets ready without generating image renditions", async () => {
+    const assetId = await seedPendingPdfAsset();
+
+    await processAsset(ctx.deps, assetId);
+
+    const asset = await ctx.prisma.asset.findUnique({
+      where: { id: assetId },
+      include: { renditions: true },
+    });
+    expect(asset!.status).toBe("ready");
+    expect(asset!.width).toBeNull();
+    expect(asset!.height).toBeNull();
+    expect(asset!.format).toBe("pdf");
+    expect(asset!.renditions).toEqual([]);
+    expect(await ctx.storage.exists(`assets/${assetId}/original`)).toBe(true);
   });
 
   it("marks the asset failed when the original is missing", async () => {

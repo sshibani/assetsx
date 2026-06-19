@@ -18,6 +18,7 @@ export const SUPPORTED_MIME_TYPES = [
   "image/png",
   "image/webp",
   "image/gif",
+  "application/pdf",
 ] as const;
 export type SupportedMimeType = (typeof SUPPORTED_MIME_TYPES)[number];
 
@@ -53,6 +54,7 @@ export interface AssetDTO {
   description: string | null;
   metadataSource: MetadataSource;
   renditions: RenditionDTO[];
+  originalUrl: string;
   expiresAt: string | null;
   createdAt: string;
   updatedAt: string;

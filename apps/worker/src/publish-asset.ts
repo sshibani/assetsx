@@ -1,5 +1,5 @@
 import type { RenditionName } from "@assetx/shared-types";
-import type { PublishableAsset } from "@assetx/publishing";
+import type { PublishableAsset, PublishableRenditions } from "@assetx/publishing";
 import type { WorkerDependencies } from "./dependencies.js";
 
 /**
@@ -27,7 +27,7 @@ export async function publishAsset(
       r.name as RenditionName,
       deps.storage.getUrl(r.storageKey),
     ]),
-  ) as Record<RenditionName, string>;
+  ) as PublishableRenditions;
 
   const publishable: PublishableAsset = {
     id: asset.id,
@@ -36,6 +36,7 @@ export async function publishAsset(
     width: asset.width,
     height: asset.height,
     format: asset.format,
+    originalUrl: deps.storage.getUrl(`assets/${asset.id}/original`),
     renditions,
   };
 

@@ -32,6 +32,10 @@ function expiryLabel(value: string): string {
   return `${prefix} ${formatExpiryDate(value)}`;
 }
 
+function isPdf(asset: AssetDTO): boolean {
+  return asset.format.toLowerCase() === "pdf";
+}
+
 export default function AssetDetailPage() {
   const { client } = useAuth();
   const router = useRouter();
@@ -98,6 +102,7 @@ export default function AssetDetailPage() {
   const standard =
     asset.renditions.find((r) => r.name === "standard") ??
     asset.renditions.find((r) => r.name === "original");
+  const pdf = isPdf(asset);
 
   return (
     <>
@@ -122,14 +127,24 @@ export default function AssetDetailPage() {
           {/* Left: preview + renditions */}
           <div>
             <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
-              {standard && (
+              {standard ? (
                 <img
                   className="preview"
                   src={standard.url}
                   alt={asset.title ?? asset.originalName}
                   style={{ border: "none", borderRadius: 0 }}
                 />
-              )}
+              ) : pdf ? (
+                <div className="pdf-preview">
+                  <div className="pdf-icon">PDF</div>
+                  <div>
+                    <strong>{asset.title ?? asset.originalName}</strong>
+                    <a href={asset.originalUrl} target="_blank" rel="noreferrer">
+                      Open original PDF
+                    </a>
+                  </div>
+                </div>
+              ) : null}
               <div style={{ padding: "18px 20px" }}>
                 <div className="kv">
                   <span className={`badge ${asset.status}`}>{asset.status}</span>
@@ -163,7 +178,15 @@ export default function AssetDetailPage() {
                     </span>
                   </li>
                 ))}
-                {asset.renditions.length === 0 && (
+                {pdf && asset.renditions.length === 0 && (
+                  <li>
+                    <a href={asset.originalUrl} target="_blank" rel="noreferrer">
+                      original
+                    </a>
+                    <span className="dim">PDF</span>
+                  </li>
+                )}
+                {!pdf && asset.renditions.length === 0 && (
                   <li className="dim">Renditions are still being generated…</li>
                 )}
               </ul>

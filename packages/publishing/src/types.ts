@@ -1,5 +1,7 @@
 import type { RenditionName } from "@assetx/shared-types";
 
+export type PublishableRenditions = Partial<Record<RenditionName, string>>;
+
 export interface PublishableAsset {
   id: string;
   title: string | null;
@@ -7,7 +9,8 @@ export interface PublishableAsset {
   width: number | null;
   height: number | null;
   format: string;
-  renditions: Record<RenditionName, string>;
+  originalUrl: string;
+  renditions: PublishableRenditions;
 }
 
 export interface PublishResult {

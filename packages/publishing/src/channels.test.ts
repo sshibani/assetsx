@@ -11,6 +11,7 @@ const asset: PublishableAsset = {
   width: 1920,
   height: 1080,
   format: "webp",
+  originalUrl: "http://host/public/asset-1/original",
   renditions: {
     thumb: "http://host/public/asset-1/thumb",
     standard: "http://host/public/asset-1/standard",
@@ -48,6 +49,7 @@ describe("WebhookChannel", () => {
     const body = JSON.parse(init.body);
     expect(body.event).toBe("asset.published");
     expect(body.asset.id).toBe("asset-1");
+    expect(body.asset.originalUrl).toBe("http://host/public/asset-1/original");
     expect(body.asset.renditions.thumb).toBe("http://host/public/asset-1/thumb");
     expect(typeof body.publishedAt).toBe("string");
   });
