@@ -23,6 +23,8 @@ const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS "AccountMembership" ("id" TEXT NOT NULL PRIMARY KEY,"accountId" TEXT NOT NULL,"userId" TEXT NOT NULL,"role" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'active',"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL,CONSTRAINT "AccountMembership_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "AccountMembership_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS "RefreshToken" ("id" TEXT NOT NULL PRIMARY KEY,"userId" TEXT NOT NULL,"accountId" TEXT,"sessionId" TEXT NOT NULL,"identityProvider" TEXT NOT NULL DEFAULT 'local',"tokenHash" TEXT NOT NULL,"expiresAt" DATETIME NOT NULL,"revokedAt" DATETIME,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS "Asset" ("id" TEXT NOT NULL PRIMARY KEY,"accountId" TEXT NOT NULL,"ownerId" TEXT NOT NULL,"originalName" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'pending',"checksum" TEXT NOT NULL,"width" INTEGER,"height" INTEGER,"format" TEXT NOT NULL,"sizeBytes" INTEGER NOT NULL,"title" TEXT,"description" TEXT,"metadataSource" TEXT NOT NULL DEFAULT 'manual',"expiresAt" DATETIME,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL,CONSTRAINT "Asset_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "Asset_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS "AssetComment" ("id" TEXT NOT NULL PRIMARY KEY,"accountId" TEXT NOT NULL,"assetId" TEXT NOT NULL,"authorId" TEXT NOT NULL,"body" TEXT NOT NULL,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL,CONSTRAINT "AssetComment_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "AssetComment_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "AssetComment_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS "AssetActivity" ("id" TEXT NOT NULL PRIMARY KEY,"accountId" TEXT NOT NULL,"assetId" TEXT NOT NULL,"actorId" TEXT,"type" TEXT NOT NULL,"summary" TEXT NOT NULL,"detailsJson" TEXT,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "AssetActivity_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "AssetActivity_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "AssetActivity_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS "Rendition" ("id" TEXT NOT NULL PRIMARY KEY,"assetId" TEXT NOT NULL,"name" TEXT NOT NULL,"storageKey" TEXT NOT NULL,"width" INTEGER NOT NULL,"height" INTEGER NOT NULL,"format" TEXT NOT NULL,"sizeBytes" INTEGER NOT NULL,CONSTRAINT "Rendition_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS "Publication" ("id" TEXT NOT NULL PRIMARY KEY,"assetId" TEXT NOT NULL,"channelId" TEXT NOT NULL,"status" TEXT NOT NULL,"reference" TEXT,"error" TEXT,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "Publication_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
@@ -39,6 +41,13 @@ const schemaStatements = [
   `CREATE INDEX IF NOT EXISTS "Asset_accountId_idx" ON "Asset"("accountId")`,
   `CREATE INDEX IF NOT EXISTS "Asset_accountId_createdAt_idx" ON "Asset"("accountId", "createdAt")`,
   `CREATE INDEX IF NOT EXISTS "Asset_ownerId_idx" ON "Asset"("ownerId")`,
+  `CREATE INDEX IF NOT EXISTS "AssetComment_accountId_idx" ON "AssetComment"("accountId")`,
+  `CREATE INDEX IF NOT EXISTS "AssetComment_assetId_createdAt_idx" ON "AssetComment"("assetId", "createdAt")`,
+  `CREATE INDEX IF NOT EXISTS "AssetComment_authorId_idx" ON "AssetComment"("authorId")`,
+  `CREATE INDEX IF NOT EXISTS "AssetActivity_accountId_idx" ON "AssetActivity"("accountId")`,
+  `CREATE INDEX IF NOT EXISTS "AssetActivity_assetId_createdAt_idx" ON "AssetActivity"("assetId", "createdAt")`,
+  `CREATE INDEX IF NOT EXISTS "AssetActivity_actorId_idx" ON "AssetActivity"("actorId")`,
+  `CREATE INDEX IF NOT EXISTS "AssetActivity_type_idx" ON "AssetActivity"("type")`,
   `CREATE INDEX IF NOT EXISTS "Rendition_assetId_idx" ON "Rendition"("assetId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "Rendition_assetId_name_key" ON "Rendition"("assetId", "name")`,
   `CREATE INDEX IF NOT EXISTS "Publication_assetId_idx" ON "Publication"("assetId")`,
@@ -121,6 +130,7 @@ export async function createUserWithToken(
     email?: string;
     role?: "admin" | "user" | "super_user";
     accountRole?: "account_owner" | "account_admin" | "asset_manager" | "asset_viewer";
+    accountId?: string;
   } = {},
 ): Promise<{ userId: string; accountId: string | null; accessToken: string }> {
   const email = options.email ?? `user-${randomUUID()}@assetx.local`;
@@ -131,12 +141,16 @@ export async function createUserWithToken(
   const account =
     globalRole === "super_user"
       ? null
-      : await ctx.prisma.account.create({
-          data: {
-            name: `${email} Account`,
-            slug: `acct-${randomUUID()}`,
-          },
-        });
+      : options.accountId
+        ? await ctx.prisma.account.findUniqueOrThrow({
+            where: { id: options.accountId },
+          })
+        : await ctx.prisma.account.create({
+            data: {
+              name: `${email} Account`,
+              slug: `acct-${randomUUID()}`,
+            },
+          });
   if (account) {
     await ctx.prisma.accountMembership.create({
       data: {

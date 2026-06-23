@@ -12,6 +12,7 @@ let ctx: TestContext;
 let app: FastifyInstance;
 let token: string;
 let userId: string;
+let accountId: string;
 
 beforeEach(async () => {
   ctx = await createTestContext();
@@ -19,6 +20,7 @@ beforeEach(async () => {
   const auth = await createUserWithToken(ctx);
   token = auth.accessToken;
   userId = auth.userId;
+  accountId = auth.accountId!;
 });
 
 afterEach(async () => {
@@ -111,6 +113,12 @@ describe("POST /api/assets", () => {
     expect(ctx.queue.jobs("assets")).toEqual([
       { type: "process-asset", assetId: body.id },
     ]);
+
+    const activity = await ctx.prisma.assetActivity.findFirst({
+      where: { assetId: body.id, type: "asset.created" },
+    });
+    expect(activity?.actorId).toBe(userId);
+    expect(activity?.summary).toBe("Asset created");
   });
 
   it("rejects an unsupported file (magic-byte check)", async () => {
@@ -192,6 +200,30 @@ describe("PATCH /api/assets/:id", () => {
     expect(res.json().description).toBe("My Description");
     expect(res.json()).not.toHaveProperty("altText");
     expect(res.json()).not.toHaveProperty("tags");
+
+    const activity = await ctx.prisma.assetActivity.findFirst({
+      where: { assetId: created.id, type: "asset.updated" },
+    });
+    expect(activity?.actorId).toBe(userId);
+    expect(activity?.summary).toBe("Asset metadata updated");
+    expect(JSON.parse(activity!.detailsJson!).changedFields).toEqual([
+      "title",
+      "description",
+    ]);
+  });
+
+  it("does not log update activity when metadata does not change", async () => {
+    const created = (await uploadImage(token)).json();
+    await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { title: null },
+    });
+    const updates = await ctx.prisma.assetActivity.findMany({
+      where: { assetId: created.id, type: "asset.updated" },
+    });
+    expect(updates).toHaveLength(0);
   });
 
   it("sets an optional expiry date at UTC end-of-day", async () => {
@@ -245,6 +277,98 @@ describe("PATCH /api/assets/:id", () => {
       payload: { expiresAt: "2026-02-30" },
     });
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe("asset comments and activity", () => {
+  it("returns a timeline with create activity and comments", async () => {
+    const created = (await uploadImage(token)).json();
+    const commentRes = await app.inject({
+      method: "POST",
+      url: `/api/assets/${created.id}/comments`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { body: " Looks good to me. " },
+    });
+    expect(commentRes.statusCode).toBe(201);
+    expect(commentRes.json().kind).toBe("comment");
+    expect(commentRes.json().comment.body).toBe("Looks good to me.");
+
+    const timelineRes = await app.inject({
+      method: "GET",
+      url: `/api/assets/${created.id}/timeline`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(timelineRes.statusCode).toBe(200);
+    const items = timelineRes.json().items;
+    expect(items.map((item: { kind: string }) => item.kind)).toContain("comment");
+    expect(
+      items.some(
+        (item: { kind: string; activity?: { type: string } }) =>
+          item.kind === "activity" && item.activity?.type === "asset.created",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects empty and overlong comments", async () => {
+    const created = (await uploadImage(token)).json();
+    const empty = await app.inject({
+      method: "POST",
+      url: `/api/assets/${created.id}/comments`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { body: "   " },
+    });
+    expect(empty.statusCode).toBe(400);
+
+    const overlong = await app.inject({
+      method: "POST",
+      url: `/api/assets/${created.id}/comments`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { body: "x".repeat(2001) },
+    });
+    expect(overlong.statusCode).toBe(400);
+  });
+
+  it("allows viewers to read timeline but not create comments", async () => {
+    const created = (await uploadImage(token)).json();
+    const viewer = await createUserWithToken(ctx, {
+      accountId,
+      accountRole: "asset_viewer",
+    });
+
+    const timelineRes = await app.inject({
+      method: "GET",
+      url: `/api/assets/${created.id}/timeline`,
+      headers: { authorization: `Bearer ${viewer.accessToken}` },
+    });
+    expect(timelineRes.statusCode).toBe(200);
+
+    const commentRes = await app.inject({
+      method: "POST",
+      url: `/api/assets/${created.id}/comments`,
+      headers: { authorization: `Bearer ${viewer.accessToken}` },
+      payload: { body: "Viewer comment" },
+    });
+    expect(commentRes.statusCode).toBe(403);
+  });
+
+  it("forbids timeline and comments across accounts", async () => {
+    const created = (await uploadImage(token)).json();
+    const other = await createUserWithToken(ctx);
+
+    const timelineRes = await app.inject({
+      method: "GET",
+      url: `/api/assets/${created.id}/timeline`,
+      headers: { authorization: `Bearer ${other.accessToken}` },
+    });
+    expect(timelineRes.statusCode).toBe(403);
+
+    const commentRes = await app.inject({
+      method: "POST",
+      url: `/api/assets/${created.id}/comments`,
+      headers: { authorization: `Bearer ${other.accessToken}` },
+      payload: { body: "Cross-account comment" },
+    });
+    expect(commentRes.statusCode).toBe(403);
   });
 });
 

@@ -35,6 +35,7 @@ describe("shared-types constants", () => {
     expect(permissionsForAccountRole("asset_viewer")).toEqual([
       "account:read",
       "assets:read",
+      "comments:read",
     ]);
     expect(permissionsForAccountRole("account_owner")).toContain(
       "members:manage",

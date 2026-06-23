@@ -1,6 +1,7 @@
 import type {
   AuthAccountContext,
   AssetDTO,
+  AssetTimelineItemDTO,
   AuthTokens,
   ChannelInfoLike,
   UserDTO,
@@ -136,6 +137,22 @@ export class ApiClient {
 
   async deleteAsset(id: string): Promise<void> {
     await this.request<void>(`/api/assets/${id}`, { method: "DELETE" });
+  }
+
+  async listAssetTimeline(id: string): Promise<{ items: AssetTimelineItemDTO[] }> {
+    return this.request<{ items: AssetTimelineItemDTO[] }>(
+      `/api/assets/${id}/timeline`,
+    );
+  }
+
+  async createAssetComment(
+    id: string,
+    body: string,
+  ): Promise<AssetTimelineItemDTO> {
+    return this.request<AssetTimelineItemDTO>(`/api/assets/${id}/comments`, {
+      method: "POST",
+      body: { body },
+    });
   }
 
   // --- Publishing ---

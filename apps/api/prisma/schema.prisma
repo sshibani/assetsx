@@ -17,6 +17,8 @@ model User {
   memberships  AccountMembership[]
   identities   UserIdentity[]
   assets       Asset[]
+  comments     AssetComment[]
+  activities   AssetActivity[]
   refreshTokens RefreshToken[]
 }
 
@@ -29,6 +31,8 @@ model Account {
   updatedAt   DateTime            @updatedAt
   memberships AccountMembership[]
   assets      Asset[]
+  comments    AssetComment[]
+  activities  AssetActivity[]
 }
 
 model UserIdentity {
@@ -99,10 +103,48 @@ model Asset {
   owner          User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   renditions     Rendition[]
   publications   Publication[]
+  comments       AssetComment[]
+  activities     AssetActivity[]
 
   @@index([accountId])
   @@index([accountId, createdAt])
   @@index([ownerId])
+}
+
+model AssetComment {
+  id        String   @id @default(uuid())
+  accountId String
+  assetId   String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([accountId])
+  @@index([assetId, createdAt])
+  @@index([authorId])
+}
+
+model AssetActivity {
+  id          String   @id @default(uuid())
+  accountId   String
+  assetId     String
+  actorId     String?
+  type        String
+  summary     String
+  detailsJson String?
+  createdAt   DateTime @default(now())
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  actor       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([accountId])
+  @@index([assetId, createdAt])
+  @@index([actorId])
+  @@index([type])
 }
 
 model Rendition {

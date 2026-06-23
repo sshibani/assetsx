@@ -1,16 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../lib/client-context";
 import type {
   AssetDTO,
+  AssetTimelineItemDTO,
   ChannelInfoLike,
   PublicationDTO,
 } from "../../../lib/types";
 
 function formatCreatedAt(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function formatTimelineDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
@@ -37,7 +45,7 @@ function isPdf(asset: AssetDTO): boolean {
 }
 
 export default function AssetDetailPage() {
-  const { client, permissions } = useAuth();
+  const { client, permissions, user } = useAuth();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -45,21 +53,41 @@ export default function AssetDetailPage() {
   const [asset, setAsset] = useState<AssetDTO | null>(null);
   const [channels, setChannels] = useState<ChannelInfoLike[]>([]);
   const [publications, setPublications] = useState<PublicationDTO[]>([]);
+  const [timeline, setTimeline] = useState<AssetTimelineItemDTO[]>([]);
+  const [timelineError, setTimelineError] = useState<string | null>(null);
+  const [commentBody, setCommentBody] = useState("");
+  const [commentSaving, setCommentSaving] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
-  const canUpdate = permissions.includes("assets:update");
-  const canDelete = permissions.includes("assets:delete");
-  const canPublish = permissions.includes("assets:publish");
+  const hasPermission = (permission: (typeof permissions)[number]) =>
+    user?.globalRole === "super_user" || permissions.includes(permission);
+  const canUpdate = hasPermission("assets:update");
+  const canDelete = hasPermission("assets:delete");
+  const canPublish = hasPermission("assets:publish");
+  const canComment = hasPermission("comments:create");
 
   const load = async () => {
-    const [a, ch, pubs] = await Promise.all([
+    const [a, ch, pubs, timelineResult] = await Promise.all([
       client.getAsset(id),
       client.listChannels(),
       client.listPublications(id),
+      client.listAssetTimeline(id),
     ]);
     setAsset(a);
     setChannels(ch.items);
     setPublications(pubs.items);
+    setTimeline(timelineResult.items);
+    setTimelineError(null);
+  };
+
+  const loadTimeline = async () => {
+    try {
+      const result = await client.listAssetTimeline(id);
+      setTimeline(result.items);
+      setTimelineError(null);
+    } catch {
+      setTimelineError("Could not load comments and activity.");
+    }
   };
 
   useEffect(() => {
@@ -78,8 +106,27 @@ export default function AssetDetailPage() {
     if (!canUpdate) return;
     const updated = await client.updateAsset(id, data);
     setAsset(updated);
+    await loadTimeline();
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
+  };
+
+  const addComment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canComment || commentSaving) return;
+    const body = commentBody.trim();
+    if (!body) return;
+    setCommentSaving(true);
+    try {
+      const item = await client.createAssetComment(id, body);
+      setTimeline((items) => [item, ...items]);
+      setCommentBody("");
+      setTimelineError(null);
+    } catch {
+      setTimelineError("Could not add comment.");
+    } finally {
+      setCommentSaving(false);
+    }
   };
 
   const publish = async () => {
@@ -99,7 +146,7 @@ export default function AssetDetailPage() {
     return (
       <div className="center-state">
         <div className="spinner" />
-        <p>Loading asset…</p>
+        <p>Loading asset...</p>
       </div>
     );
   }
@@ -113,7 +160,7 @@ export default function AssetDetailPage() {
     <>
       <header className="appbar">
         <Link href="/" className="brand" style={{ fontSize: 16 }}>
-          <span aria-hidden>←</span> Back to gallery
+          <span aria-hidden>{"<-"}</span> Back to gallery
         </Link>
         <div className="appbar-actions">
           {saved && (
@@ -129,7 +176,6 @@ export default function AssetDetailPage() {
 
       <main className="container">
         <div className="detail-grid">
-          {/* Left: preview + renditions */}
           <div>
             <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
               {standard ? (
@@ -154,7 +200,7 @@ export default function AssetDetailPage() {
                 <div className="kv">
                   <span className={`badge ${asset.status}`}>{asset.status}</span>
                   <span>
-                    {asset.width ?? "?"}×{asset.height ?? "?"}
+                    {asset.width ?? "?"}x{asset.height ?? "?"}
                   </span>
                   <span>{asset.format.toUpperCase()}</span>
                   <span>{Math.round(asset.sizeBytes / 1024)} KB</span>
@@ -179,7 +225,7 @@ export default function AssetDetailPage() {
                       {r.name}
                     </a>
                     <span className="dim">
-                      {r.width}×{r.height} · {r.format}
+                      {r.width}x{r.height} / {r.format}
                     </span>
                   </li>
                 ))}
@@ -192,13 +238,12 @@ export default function AssetDetailPage() {
                   </li>
                 )}
                 {!pdf && asset.renditions.length === 0 && (
-                  <li className="dim">Renditions are still being generated…</li>
+                  <li className="dim">Renditions are still being generated...</li>
                 )}
               </ul>
             </div>
           </div>
 
-          {/* Right: metadata + publish */}
           <div>
             <div className="panel">
               <h3 className="section-title">Metadata</h3>
@@ -228,7 +273,7 @@ export default function AssetDetailPage() {
                 <label className="label">Description</label>
                 <textarea
                   className="textarea"
-                  placeholder="Describe this asset…"
+                  placeholder="Describe this asset..."
                   defaultValue={asset.description ?? ""}
                   disabled={!canUpdate}
                   onBlur={(e) => save({ description: e.target.value })}
@@ -300,7 +345,7 @@ export default function AssetDetailPage() {
                       </span>
                       {p.reference && (
                         <a href={p.reference} target="_blank" rel="noreferrer">
-                          Open ↗
+                          Open
                         </a>
                       )}
                     </li>
@@ -308,41 +353,68 @@ export default function AssetDetailPage() {
                 </ul>
               )}
             </div>
-
           </div>
         </div>
 
         <div className="panel" style={{ marginTop: 28 }}>
           <h3 className="section-title">Comments & activity</h3>
-          <ul className="pub-list">
-            <li style={{ alignItems: "flex-start", flexDirection: "column" }}>
-              <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                Morgan added a comment · 2 hours ago
-              </span>
-              <span>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
-                posuere erat a ante venenatis dapibus.
-              </span>
-            </li>
-            <li style={{ alignItems: "flex-start", flexDirection: "column" }}>
-              <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                Riley updated asset details · Yesterday
-              </span>
-              <span>
-                Sed posuere consectetur est at lobortis. Donec ullamcorper nulla
-                non metus auctor fringilla.
-              </span>
-            </li>
-            <li style={{ alignItems: "flex-start", flexDirection: "column" }}>
-              <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                Alex reviewed this asset · 3 days ago
-              </span>
-              <span>
-                Cras mattis consectetur purus sit amet fermentum. Aenean lacinia
-                bibendum nulla sed consectetur.
-              </span>
-            </li>
-          </ul>
+          {canComment && (
+            <form onSubmit={addComment} style={{ marginBottom: 18 }}>
+              <textarea
+                className="textarea"
+                placeholder="Add a comment..."
+                value={commentBody}
+                maxLength={2000}
+                onChange={(event) => setCommentBody(event.target.value)}
+              />
+              <button
+                className="btn"
+                type="submit"
+                disabled={commentSaving || commentBody.trim().length === 0}
+                style={{ marginTop: 10 }}
+              >
+                {commentSaving ? "Adding..." : "Add comment"}
+              </button>
+            </form>
+          )}
+          {timelineError && (
+            <p className="dim" style={{ color: "var(--danger)" }}>
+              {timelineError}
+            </p>
+          )}
+          {timeline.length === 0 ? (
+            <p className="dim" style={{ color: "var(--text-muted)" }}>
+              No comments or activity yet.
+            </p>
+          ) : (
+            <ul className="pub-list">
+              {timeline.map((item) => {
+                const actor =
+                  item.kind === "comment"
+                    ? item.comment.authorEmail
+                    : item.activity.actorEmail ?? "System";
+                const label =
+                  item.kind === "comment" ? "added a comment" : item.activity.summary;
+                return (
+                  <li
+                    key={`${item.kind}-${item.id}`}
+                    style={{ alignItems: "flex-start", flexDirection: "column" }}
+                  >
+                    <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+                      {actor} {label} - {formatTimelineDate(item.createdAt)}
+                    </span>
+                    {item.kind === "comment" ? (
+                      <span style={{ whiteSpace: "pre-wrap" }}>
+                        {item.comment.body}
+                      </span>
+                    ) : (
+                      <span>{item.activity.type.replace(".", " ")}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       </main>
     </>

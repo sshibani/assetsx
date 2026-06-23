@@ -2,6 +2,7 @@ export type {
   AccountDTO,
   AccountMembershipDTO,
   AuthAccountContext,
+  AssetTimelineItemDTO,
   AssetDTO,
   AuthTokens,
   Permission,

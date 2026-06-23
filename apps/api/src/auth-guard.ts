@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type { PrismaClient } from "@prisma/client";
 import type { TokenService } from "@assetx/auth";
 import type { AccountRole, GlobalRole, Permission } from "@assetx/shared-types";
+import { permissionsForAccountRole } from "@assetx/shared-types";
 import type { AuthUser } from "./authorization.js";
 export type { AuthUser } from "./authorization.js";
 
@@ -25,6 +26,8 @@ export function makeAuthGuard(tokens: TokenService, prisma?: PrismaClient) {
     const token = header.slice("Bearer ".length);
     try {
       const decoded = tokens.verifyAccessToken(token);
+      let accountRole = decoded.accountRole as AccountRole | null;
+      let permissions = decoded.permissions as Permission[];
       if (prisma) {
         const user = await prisma.user.findUnique({
           where: { id: decoded.sub },
@@ -53,14 +56,26 @@ export function makeAuthGuard(tokens: TokenService, prisma?: PrismaClient) {
             await reply.code(401).send({ error: "Invalid or expired token" });
             return;
           }
+          accountRole = (membership?.role as AccountRole | undefined) ?? null;
+          permissions = accountRole
+            ? permissionsForAccountRole(accountRole)
+            : user.globalRole === "super_user"
+              ? (["platform:manage"] as Permission[])
+              : [];
+        } else {
+          accountRole = null;
+          permissions =
+            user.globalRole === "super_user"
+              ? (["platform:manage"] as Permission[])
+              : [];
         }
       }
       request.user = {
         id: decoded.sub,
         globalRole: decoded.globalRole as GlobalRole,
         accountId: decoded.accountId,
-        accountRole: decoded.accountRole as AccountRole | null,
-        permissions: decoded.permissions as Permission[],
+        accountRole,
+        permissions,
         identityProvider: decoded.identityProvider,
         sessionId: decoded.sessionId,
       };

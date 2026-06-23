@@ -11,6 +11,10 @@ const updateSchema = z.object({
   expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 
+const commentSchema = z.object({
+  body: z.string().max(2000),
+});
+
 function handleError(reply: import("fastify").FastifyReply, err: unknown) {
   if (err instanceof AssetError) {
     return reply.code(err.statusCode).send({ error: err.message });
@@ -59,6 +63,38 @@ export async function registerAssetRoutes(
       const { id } = request.params as { id: string };
       try {
         return reply.send(await service.getForUser(id, request.user!));
+      } catch (err) {
+        return handleError(reply, err);
+      }
+    },
+  );
+
+  app.get(
+    "/api/assets/:id/timeline",
+    { preHandler: authGuard },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      try {
+        const items = await service.listTimeline(id, request.user!);
+        return reply.send({ items });
+      } catch (err) {
+        return handleError(reply, err);
+      }
+    },
+  );
+
+  app.post(
+    "/api/assets/:id/comments",
+    { preHandler: authGuard },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const parsed = commentSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.flatten() });
+      }
+      try {
+        const item = await service.createComment(id, request.user!, parsed.data);
+        return reply.code(201).send(item);
       } catch (err) {
         return handleError(reply, err);
       }

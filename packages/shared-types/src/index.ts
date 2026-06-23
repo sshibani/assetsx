@@ -37,6 +37,8 @@ export const PERMISSIONS = [
   "assets:update",
   "assets:delete",
   "assets:publish",
+  "comments:read",
+  "comments:create",
   "platform:manage",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
@@ -52,6 +54,8 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "assets:update",
     "assets:delete",
     "assets:publish",
+    "comments:read",
+    "comments:create",
   ],
   account_admin: [
     "account:read",
@@ -63,6 +67,8 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "assets:update",
     "assets:delete",
     "assets:publish",
+    "comments:read",
+    "comments:create",
   ],
   asset_manager: [
     "account:read",
@@ -71,8 +77,10 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "assets:update",
     "assets:delete",
     "assets:publish",
+    "comments:read",
+    "comments:create",
   ],
-  asset_viewer: ["account:read", "assets:read"],
+  asset_viewer: ["account:read", "assets:read", "comments:read"],
 };
 
 export function permissionsForAccountRole(role: AccountRole): Permission[] {
@@ -129,6 +137,45 @@ export interface AssetDTO {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AssetCommentDTO {
+  id: string;
+  accountId: string;
+  assetId: string;
+  authorId: string;
+  authorEmail: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AssetActivityType = "asset.created" | "asset.updated";
+
+export interface AssetActivityDTO {
+  id: string;
+  accountId: string;
+  assetId: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  type: AssetActivityType;
+  summary: string;
+  details: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export type AssetTimelineItemDTO =
+  | {
+      kind: "comment";
+      id: string;
+      createdAt: string;
+      comment: AssetCommentDTO;
+    }
+  | {
+      kind: "activity";
+      id: string;
+      createdAt: string;
+      activity: AssetActivityDTO;
+    };
 
 export interface AccountDTO {
   id: string;

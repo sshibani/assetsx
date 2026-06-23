@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import type { AccountRole } from "@assetx/shared-types";
+import { permissionsForAccountRole } from "@assetx/shared-types";
 import { AuthService, AuthError } from "../services/auth-service.js";
 import { makeAuthGuard } from "../auth-guard.js";
 import type { AppDependencies } from "../dependencies.js";
@@ -143,7 +145,7 @@ export async function registerAuthRoutes(
             createdAt: m.createdAt.toISOString(),
             updatedAt: m.updatedAt.toISOString(),
           },
-          permissions: request.user!.permissions,
+          permissions: permissionsForAccountRole(m.role as AccountRole),
         })),
     });
   });

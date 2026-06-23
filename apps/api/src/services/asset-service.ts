@@ -1,11 +1,22 @@
 import { createHash } from "node:crypto";
 import { fileTypeFromBuffer } from "file-type";
-import type { PrismaClient, Asset, Rendition } from "@prisma/client";
+import type {
+  PrismaClient,
+  Asset,
+  AssetActivity,
+  AssetComment,
+  Rendition,
+  User,
+} from "@prisma/client";
 import type { StorageProvider } from "@assetx/storage";
 import type { JobQueue } from "@assetx/queue";
 import {
   SUPPORTED_MIME_TYPES,
+  type AssetActivityDTO,
+  type AssetCommentDTO,
   type AssetDTO,
+  type AssetTimelineItemDTO,
+  type AssetActivityType,
   type RenditionName,
 } from "@assetx/shared-types";
 import type { AuthUser } from "../authorization.js";
@@ -31,6 +42,10 @@ export interface UpdateMetadataInput {
   title?: string | null;
   description?: string | null;
   expiresAt?: string | null;
+}
+
+export interface CreateCommentInput {
+  body: string;
 }
 
 export class AssetService {
@@ -74,6 +89,22 @@ export class AssetService {
       assetId: asset.id,
     });
 
+    await this.prisma.assetActivity.create({
+      data: {
+        accountId: asset.accountId,
+        assetId: asset.id,
+        actorId: input.ownerId,
+        type: "asset.created",
+        summary: "Asset created",
+        detailsJson: JSON.stringify({
+          originalName: asset.originalName,
+          format: asset.format,
+          sizeBytes: asset.sizeBytes,
+        }),
+        createdAt: asset.createdAt,
+      },
+    });
+
     return this.toDTO(asset, []);
   }
 
@@ -112,20 +143,129 @@ export class AssetService {
     if (!asset) throw new AssetError("Asset not found", 404);
     this.assertCanAccessAsset(asset, user, "assets:update");
 
+    const expiresAt =
+      input.expiresAt !== undefined
+        ? this.parseExpiryDate(input.expiresAt)
+        : undefined;
+    const data = {
+      ...(input.title !== undefined ? { title: input.title } : {}),
+      ...(input.description !== undefined
+        ? { description: input.description }
+        : {}),
+      ...(expiresAt !== undefined ? { expiresAt } : {}),
+    };
+    const changes = this.changedMetadata(asset, data);
+
     const updated = await this.prisma.asset.update({
       where: { id },
-      data: {
-        ...(input.title !== undefined ? { title: input.title } : {}),
-        ...(input.description !== undefined
-          ? { description: input.description }
-          : {}),
-        ...(input.expiresAt !== undefined
-          ? { expiresAt: this.parseExpiryDate(input.expiresAt) }
-          : {}),
-      },
+      data,
       include: { renditions: true },
     });
+    if (changes.length > 0) {
+      await this.prisma.assetActivity.create({
+        data: {
+          accountId: asset.accountId,
+          assetId: asset.id,
+          actorId: user.id,
+          type: "asset.updated",
+          summary: "Asset metadata updated",
+          detailsJson: JSON.stringify({
+            changedFields: changes.map((change) => change.field),
+            before: Object.fromEntries(
+              changes.map((change) => [change.field, change.before]),
+            ),
+            after: Object.fromEntries(
+              changes.map((change) => [change.field, change.after]),
+            ),
+          }),
+        },
+      });
+    }
     return this.toDTO(updated, updated.renditions);
+  }
+
+  async listTimeline(
+    id: string,
+    user: AuthUser,
+  ): Promise<AssetTimelineItemDTO[]> {
+    const asset = await this.prisma.asset.findUnique({ where: { id } });
+    if (!asset) throw new AssetError("Asset not found", 404);
+    this.assertCanAccessAsset(asset, user, "comments:read");
+
+    const [comments, activities] = await Promise.all([
+      this.prisma.assetComment.findMany({
+        where: { assetId: id, accountId: asset.accountId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: { author: true },
+      }),
+      this.prisma.assetActivity.findMany({
+        where: { assetId: id, accountId: asset.accountId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        include: { actor: true },
+      }),
+    ]);
+
+    return [
+      ...comments.map(
+        (comment): AssetTimelineItemDTO => ({
+          kind: "comment",
+          id: comment.id,
+          createdAt: comment.createdAt.toISOString(),
+          comment: this.commentToDTO(comment, comment.author),
+        }),
+      ),
+      ...activities.map(
+        (activity): AssetTimelineItemDTO => ({
+          kind: "activity",
+          id: activity.id,
+          createdAt: activity.createdAt.toISOString(),
+          activity: this.activityToDTO(activity, activity.actor),
+        }),
+      ),
+    ]
+      .sort((a, b) => {
+        const byDate =
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return byDate || b.id.localeCompare(a.id);
+      })
+      .slice(0, 50);
+  }
+
+  async createComment(
+    id: string,
+    user: AuthUser,
+    input: CreateCommentInput,
+  ): Promise<AssetTimelineItemDTO> {
+    const asset = await this.prisma.asset.findUnique({ where: { id } });
+    if (!asset) throw new AssetError("Asset not found", 404);
+    this.assertCanAccessAsset(asset, user, "comments:create");
+
+    const body = input.body.trim();
+    if (body.length === 0) {
+      throw new AssetError("Comment body is required", 400);
+    }
+    if (body.length > 2000) {
+      throw new AssetError("Comment body must be 2000 characters or less", 400);
+    }
+
+    const comment = await this.prisma.assetComment.create({
+      data: {
+        accountId: asset.accountId,
+        assetId: asset.id,
+        authorId: user.id,
+        body,
+      },
+      include: { author: true },
+    });
+
+    return {
+      kind: "comment",
+      id: comment.id,
+      createdAt: comment.createdAt.toISOString(),
+      comment: this.commentToDTO(comment, comment.author),
+    };
   }
 
   async delete(id: string, user: AuthUser): Promise<void> {
@@ -187,6 +327,91 @@ export class AssetService {
     }
 
     return expiresAt;
+  }
+
+  private changedMetadata(
+    asset: Asset,
+    data: {
+      title?: string | null;
+      description?: string | null;
+      expiresAt?: Date | null;
+    },
+  ): Array<{ field: string; before: string | null; after: string | null }> {
+    const changes: Array<{
+      field: string;
+      before: string | null;
+      after: string | null;
+    }> = [];
+    if (data.title !== undefined && asset.title !== data.title) {
+      changes.push({ field: "title", before: asset.title, after: data.title });
+    }
+    if (
+      data.description !== undefined &&
+      asset.description !== data.description
+    ) {
+      changes.push({
+        field: "description",
+        before: asset.description,
+        after: data.description,
+      });
+    }
+    if (
+      data.expiresAt !== undefined &&
+      (asset.expiresAt?.toISOString() ?? null) !==
+        (data.expiresAt?.toISOString() ?? null)
+    ) {
+      changes.push({
+        field: "expiresAt",
+        before: asset.expiresAt?.toISOString() ?? null,
+        after: data.expiresAt?.toISOString() ?? null,
+      });
+    }
+    return changes;
+  }
+
+  private commentToDTO(
+    comment: AssetComment,
+    author: Pick<User, "email">,
+  ): AssetCommentDTO {
+    return {
+      id: comment.id,
+      accountId: comment.accountId,
+      assetId: comment.assetId,
+      authorId: comment.authorId,
+      authorEmail: author.email,
+      body: comment.body,
+      createdAt: comment.createdAt.toISOString(),
+      updatedAt: comment.updatedAt.toISOString(),
+    };
+  }
+
+  private activityToDTO(
+    activity: AssetActivity,
+    actor: Pick<User, "email"> | null,
+  ): AssetActivityDTO {
+    return {
+      id: activity.id,
+      accountId: activity.accountId,
+      assetId: activity.assetId,
+      actorId: activity.actorId,
+      actorEmail: actor?.email ?? null,
+      type: activity.type as AssetActivityType,
+      summary: activity.summary,
+      details: this.parseDetails(activity.detailsJson),
+      createdAt: activity.createdAt.toISOString(),
+    };
+  }
+
+  private parseDetails(value: string | null): Record<string, unknown> | null {
+    if (!value) return null;
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
   }
 
   private toDTO(asset: Asset, renditions: Rendition[]): AssetDTO {
