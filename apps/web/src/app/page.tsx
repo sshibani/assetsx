@@ -28,6 +28,10 @@ export default function GalleryPage() {
   const [assets, setAssets] = useState<AssetDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const canUpload = permissions.includes("assets:create");
 
@@ -51,17 +55,39 @@ export default function GalleryPage() {
   }, [isAuthenticated, activeAccount?.account.id]);
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    const failed: string[] = [];
     setUploading(true);
+    setUploadProgress(files.length > 1 ? { current: 0, total: files.length } : null);
     try {
-      await client.uploadAsset(file);
+      for (const [index, file] of files.entries()) {
+        setUploadProgress(
+          files.length > 1 ? { current: index + 1, total: files.length } : null,
+        );
+        try {
+          await client.uploadAsset(file);
+        } catch {
+          failed.push(file.name);
+        }
+      }
       await refresh();
+      if (failed.length > 0) {
+        alert(`Upload failed for:\n${failed.join("\n")}`);
+      }
     } finally {
       setUploading(false);
+      setUploadProgress(null);
       if (fileInput.current) fileInput.current.value = "";
     }
   };
+
+  const uploadLabel =
+    uploading && uploadProgress
+      ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}...`
+      : uploading
+        ? "Uploading..."
+        : "Upload asset";
 
   return (
     <>
@@ -91,9 +117,7 @@ export default function GalleryPage() {
             onClick={() => fileInput.current?.click()}
           >
             <span aria-hidden>＋</span>
-            <span className="btn-label">
-              {uploading ? "Uploading…" : "Upload asset"}
-            </span>
+            <span className="btn-label">{uploadLabel}</span>
           </button>
           <button className="btn secondary" onClick={logout}>
             Log out
@@ -102,6 +126,7 @@ export default function GalleryPage() {
             ref={fileInput}
             type="file"
             accept="image/*,application/pdf"
+            multiple
             hidden
             onChange={onUpload}
           />
@@ -123,7 +148,7 @@ export default function GalleryPage() {
               disabled={uploading || !canUpload}
               onClick={() => fileInput.current?.click()}
             >
-              {uploading ? "Uploading…" : "Upload asset"}
+              {uploadLabel}
             </button>
           </div>
         ) : (
