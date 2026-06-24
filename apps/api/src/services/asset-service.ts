@@ -17,10 +17,10 @@ import {
   type AssetDTO,
   type AssetTimelineItemDTO,
   type AssetActivityType,
-  type RenditionName,
 } from "@assetx/shared-types";
 import type { AuthUser } from "../authorization.js";
 import { hasPermission, isSuperUser } from "../authorization.js";
+import { assetToDTO, originalKey } from "../mappers/asset-mapper.js";
 
 export class AssetError extends Error {
   constructor(
@@ -304,7 +304,7 @@ export class AssetService {
   }
 
   private originalKey(assetId: string): string {
-    return `assets/${assetId}/original`;
+    return originalKey(assetId);
   }
 
   private parseExpiryDate(value: string | null): Date | null {
@@ -415,33 +415,6 @@ export class AssetService {
   }
 
   private toDTO(asset: Asset, renditions: Rendition[]): AssetDTO {
-    return {
-      id: asset.id,
-      accountId: asset.accountId,
-      ownerId: asset.ownerId,
-      originalName: asset.originalName,
-      status: asset.status as AssetDTO["status"],
-      checksum: asset.checksum,
-      width: asset.width,
-      height: asset.height,
-      format: asset.format,
-      sizeBytes: asset.sizeBytes,
-      title: asset.title,
-      description: asset.description,
-      metadataSource: asset.metadataSource as AssetDTO["metadataSource"],
-      renditions: renditions.map((r) => ({
-        id: r.id,
-        name: r.name as RenditionName,
-        width: r.width,
-        height: r.height,
-        format: r.format,
-        sizeBytes: r.sizeBytes,
-        url: this.storage.getUrl(r.storageKey),
-      })),
-      originalUrl: this.storage.getUrl(this.originalKey(asset.id)),
-      expiresAt: asset.expiresAt?.toISOString() ?? null,
-      createdAt: asset.createdAt.toISOString(),
-      updatedAt: asset.updatedAt.toISOString(),
-    };
+    return assetToDTO(asset, renditions, this.storage);
   }
 }

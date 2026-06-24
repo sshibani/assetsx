@@ -8,6 +8,7 @@ import { useAuth } from "../../../lib/client-context";
 import type {
   AssetDTO,
   AssetTimelineItemDTO,
+  BundleDTO,
   ChannelInfoLike,
   PublicationDTO,
 } from "../../../lib/types";
@@ -60,12 +61,21 @@ export default function AssetDetailPage() {
   const [commentSaving, setCommentSaving] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
+  const [allBundles, setAllBundles] = useState<BundleDTO[]>([]);
+  const [attachedBundles, setAttachedBundles] = useState<BundleDTO[]>([]);
+  const [bundlePickerOpen, setBundlePickerOpen] = useState(false);
+  const [pickerSelection, setPickerSelection] = useState<Set<string>>(
+    new Set(),
+  );
+  const [bundleSaving, setBundleSaving] = useState(false);
+  const [bundleMessage, setBundleMessage] = useState<string | null>(null);
   const hasPermission = (permission: (typeof permissions)[number]) =>
     user?.globalRole === "super_user" || permissions.includes(permission);
   const canUpdate = hasPermission("assets:update");
   const canDelete = hasPermission("assets:delete");
   const canPublish = hasPermission("assets:publish");
   const canComment = hasPermission("comments:create");
+  const canManageBundles = hasPermission("bundles:update");
 
   const load = async () => {
     const [a, ch, pubs, timelineResult] = await Promise.all([
@@ -79,6 +89,28 @@ export default function AssetDetailPage() {
     setPublications(pubs.items);
     setTimeline(timelineResult.items);
     setTimelineError(null);
+  };
+
+  // Bundles are a secondary concern on this page: load them separately so a
+  // failure (or lack of permission) never breaks asset loading or triggers the
+  // login redirect in the main load() catch.
+  const loadBundles = async () => {
+    if (!canManageBundles) {
+      setAllBundles([]);
+      setAttachedBundles([]);
+      return;
+    }
+    try {
+      const [all, attached] = await Promise.all([
+        client.listBundles(),
+        client.listAssetBundles(id),
+      ]);
+      setAllBundles(all.items);
+      setAttachedBundles(attached.items);
+    } catch {
+      setAllBundles([]);
+      setAttachedBundles([]);
+    }
   };
 
   const loadTimeline = async () => {
@@ -102,6 +134,13 @@ export default function AssetDetailPage() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Load bundles once permissions are hydrated; never fatal to the page.
+  useEffect(() => {
+    if (!asset) return;
+    void loadBundles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asset?.id, canManageBundles]);
 
   const save = async (data: Partial<AssetDTO>) => {
     if (!canUpdate) return;
@@ -136,6 +175,52 @@ export default function AssetDetailPage() {
     setTimeout(load, 600);
   };
 
+  const openBundlePicker = () => {
+    if (!canManageBundles) return;
+    setPickerSelection(new Set());
+    setBundleMessage(null);
+    setBundlePickerOpen(true);
+  };
+
+  const togglePick = (bundleId: string) => {
+    setPickerSelection((prev) => {
+      const next = new Set(prev);
+      if (next.has(bundleId)) next.delete(bundleId);
+      else next.add(bundleId);
+      return next;
+    });
+  };
+
+  const confirmAddToBundles = async () => {
+    if (!canManageBundles || pickerSelection.size === 0) return;
+    setBundleSaving(true);
+    const ids = [...pickerSelection];
+    const results = await Promise.allSettled(
+      ids.map((bundleId) => client.addAssetToBundle(bundleId, id)),
+    );
+    const failed = results.filter((r) => r.status === "rejected").length;
+    await loadBundles();
+    setBundleSaving(false);
+    setBundlePickerOpen(false);
+    setBundleMessage(
+      failed === 0
+        ? `Added to ${ids.length} bundle${ids.length === 1 ? "" : "s"}.`
+        : `Added to ${ids.length - failed} of ${ids.length}; ${failed} failed.`,
+    );
+    setTimeout(() => setBundleMessage(null), 2500);
+  };
+
+  const removeFromBundle = async (bundleId: string) => {
+    if (!canManageBundles) return;
+    setAttachedBundles((prev) => prev.filter((b) => b.id !== bundleId));
+    try {
+      await client.removeAssetFromBundle(bundleId, id);
+    } catch {
+      // reload to restore accurate state on failure
+      await loadBundles();
+    }
+  };
+
   const remove = async () => {
     if (!canDelete) return;
     if (!confirm("Delete this asset and all its renditions?")) return;
@@ -154,6 +239,9 @@ export default function AssetDetailPage() {
       </>
     );
   }
+
+  const attachedIds = new Set(attachedBundles.map((b) => b.id));
+  const availableBundles = allBundles.filter((b) => !attachedIds.has(b.id));
 
   const standard =
     asset.renditions.find((r) => r.name === "standard") ??
@@ -357,6 +445,48 @@ export default function AssetDetailPage() {
                 </ul>
               )}
             </div>
+
+            {canManageBundles && (
+              <div className="panel" style={{ marginTop: 20 }}>
+                <h3 className="section-title">Bundles</h3>
+                {attachedBundles.length === 0 ? (
+                  <p className="dim" style={{ color: "var(--text-muted)" }}>
+                    Not in any bundle yet.
+                  </p>
+                ) : (
+                  <div className="chip-list">
+                    {attachedBundles.map((b) => (
+                      <span key={b.id} className="chip">
+                        <Link href={`/bundles/${b.id}`} className="chip-label">
+                          {b.title}
+                        </Link>
+                        <button
+                          type="button"
+                          className="chip-remove"
+                          aria-label={`Remove from ${b.title}`}
+                          title={`Remove from ${b.title}`}
+                          onClick={() => removeFromBundle(b.id)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <button
+                  className="btn block"
+                  onClick={openBundlePicker}
+                  style={{ marginTop: 12 }}
+                >
+                  + Add to bundle
+                </button>
+                {bundleMessage && (
+                  <p className="dim" style={{ marginTop: 8 }}>
+                    {bundleMessage}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -422,6 +552,77 @@ export default function AssetDetailPage() {
         </div>
       </main>
       <AppFooter />
+
+      {bundlePickerOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add to bundles"
+          onClick={() => setBundlePickerOpen(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="section-title" style={{ margin: 0 }}>
+                Add to bundles
+              </h3>
+              <button
+                type="button"
+                className="modal-close"
+                aria-label="Close"
+                onClick={() => setBundlePickerOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            {availableBundles.length === 0 ? (
+              <p className="dim" style={{ color: "var(--text-muted)" }}>
+                {allBundles.length === 0 ? (
+                  <>
+                    No bundles yet. <Link href="/bundles">Create one</Link>.
+                  </>
+                ) : (
+                  "This asset is already in every bundle."
+                )}
+              </p>
+            ) : (
+              <div className="modal-list">
+                {availableBundles.map((b) => (
+                  <label key={b.id} className="check-row">
+                    <input
+                      type="checkbox"
+                      checked={pickerSelection.has(b.id)}
+                      onChange={() => togglePick(b.id)}
+                    />
+                    <span>{b.title}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button
+                className="btn secondary"
+                onClick={() => setBundlePickerOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                onClick={confirmAddToBundles}
+                disabled={pickerSelection.size === 0 || bundleSaving}
+              >
+                {bundleSaving
+                  ? "Adding..."
+                  : `Add to ${pickerSelection.size || ""} ${
+                      pickerSelection.size === 1 ? "bundle" : "bundles"
+                    }`.trim()}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

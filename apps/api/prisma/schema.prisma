@@ -20,6 +20,7 @@ model User {
   comments     AssetComment[]
   activities   AssetActivity[]
   refreshTokens RefreshToken[]
+  bundles      Bundle[]
 }
 
 model Account {
@@ -34,6 +35,7 @@ model Account {
   comments    AssetComment[]
   activities  AssetActivity[]
   settings    AccountSettings?
+  bundles     Bundle[]
 }
 
 model AccountSettings {
@@ -116,6 +118,7 @@ model Asset {
   publications   Publication[]
   comments       AssetComment[]
   activities     AssetActivity[]
+  bundleAssets   BundleAsset[]
 
   @@index([accountId])
   @@index([accountId, createdAt])
@@ -184,4 +187,49 @@ model Publication {
   asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([assetId])
+}
+
+model Bundle {
+  id          String        @id @default(uuid())
+  accountId   String
+  ownerId     String
+  title       String
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  account     Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items       BundleAsset[]
+  shares      BundleShare[]
+
+  @@index([accountId])
+  @@index([accountId, createdAt])
+  @@index([ownerId])
+}
+
+model BundleAsset {
+  id        String   @id @default(uuid())
+  bundleId  String
+  assetId   String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  bundle    Bundle   @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([bundleId, assetId])
+  @@index([bundleId])
+  @@index([assetId])
+}
+
+model BundleShare {
+  id          String    @id @default(uuid())
+  bundleId    String
+  tokenHash   String    @unique
+  createdById String
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  bundle      Bundle    @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@index([bundleId])
 }

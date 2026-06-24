@@ -10,6 +10,10 @@ import type {
   AssetDTO,
   AssetTimelineItemDTO,
   AuthTokens,
+  BundleDTO,
+  BundleDetailDTO,
+  BundleShareCreatedDTO,
+  PublicBundleDTO,
   ChannelInfoLike,
   DateTimeFormat,
   GlobalRole,
@@ -279,6 +283,86 @@ export class ApiClient {
       method: "POST",
       body: { body },
     });
+  }
+
+  // --- Bundles ---
+  async listBundles(): Promise<{ items: BundleDTO[] }> {
+    return this.request<{ items: BundleDTO[] }>("/api/bundles");
+  }
+
+  async getBundle(id: string): Promise<BundleDetailDTO> {
+    return this.request<BundleDetailDTO>(`/api/bundles/${id}`);
+  }
+
+  /** Bundles in the account that contain the given asset. */
+  async listAssetBundles(assetId: string): Promise<{ items: BundleDTO[] }> {
+    return this.request<{ items: BundleDTO[] }>(
+      `/api/assets/${assetId}/bundles`,
+    );
+  }
+
+  async createBundle(data: {
+    title: string;
+    description?: string;
+  }): Promise<BundleDTO> {
+    return this.request<BundleDTO>("/api/bundles", {
+      method: "POST",
+      body: data,
+    });
+  }
+
+  async updateBundle(
+    id: string,
+    data: Partial<Pick<BundleDTO, "title" | "description">>,
+  ): Promise<BundleDTO> {
+    return this.request<BundleDTO>(`/api/bundles/${id}`, {
+      method: "PATCH",
+      body: data,
+    });
+  }
+
+  async deleteBundle(id: string): Promise<void> {
+    await this.request<void>(`/api/bundles/${id}`, { method: "DELETE" });
+  }
+
+  async addAssetToBundle(
+    bundleId: string,
+    assetId: string,
+  ): Promise<BundleDTO> {
+    return this.request<BundleDTO>(`/api/bundles/${bundleId}/assets`, {
+      method: "POST",
+      body: { assetId },
+    });
+  }
+
+  async removeAssetFromBundle(
+    bundleId: string,
+    assetId: string,
+  ): Promise<void> {
+    await this.request<void>(`/api/bundles/${bundleId}/assets/${assetId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async createBundleShare(
+    bundleId: string,
+    data: { expiresInDays?: number } = {},
+  ): Promise<BundleShareCreatedDTO> {
+    return this.request<BundleShareCreatedDTO>(
+      `/api/bundles/${bundleId}/share`,
+      { method: "POST", body: data },
+    );
+  }
+
+  async revokeBundleShare(bundleId: string, shareId: string): Promise<void> {
+    await this.request<void>(`/api/bundles/${bundleId}/share/${shareId}`, {
+      method: "DELETE",
+    });
+  }
+
+  /** Public, unauthenticated read of a shared bundle by token. */
+  async getSharedBundle(token: string): Promise<PublicBundleDTO> {
+    return this.request<PublicBundleDTO>(`/api/shared/bundles/${token}`);
   }
 
   // --- Publishing ---

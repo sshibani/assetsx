@@ -38,6 +38,11 @@ export const PERMISSIONS = [
   "assets:update",
   "assets:delete",
   "assets:publish",
+  "bundles:read",
+  "bundles:create",
+  "bundles:update",
+  "bundles:delete",
+  "bundles:share",
   "comments:read",
   "comments:create",
   "platform:manage",
@@ -57,6 +62,11 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "assets:update",
     "assets:delete",
     "assets:publish",
+    "bundles:read",
+    "bundles:create",
+    "bundles:update",
+    "bundles:delete",
+    "bundles:share",
     "comments:read",
     "comments:create",
   ],
@@ -67,10 +77,20 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "assets:update",
     "assets:delete",
     "assets:publish",
+    "bundles:read",
+    "bundles:create",
+    "bundles:update",
+    "bundles:delete",
+    "bundles:share",
     "comments:read",
     "comments:create",
   ],
-  account_viewer: ["account:read", "assets:read", "comments:read"],
+  account_viewer: [
+    "account:read",
+    "assets:read",
+    "bundles:read",
+    "comments:read",
+  ],
 };
 
 export function permissionsForAccountRole(role: AccountRole): Permission[] {
@@ -128,6 +148,80 @@ export interface AssetDTO {
   expiresAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BundleDTO {
+  id: string;
+  accountId: string;
+  ownerId: string;
+  title: string;
+  description: string | null;
+  assetCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BundleAssetDTO {
+  assetId: string;
+  position: number;
+  asset: AssetDTO;
+}
+
+export interface BundleDetailDTO extends BundleDTO {
+  items: BundleAssetDTO[];
+}
+
+export interface BundleShareDTO {
+  id: string;
+  bundleId: string;
+  createdById: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+/**
+ * Returned only once, when a share is created. Includes the raw token and the
+ * shareable URL; the token itself is never persisted (only its hash is stored)
+ * and cannot be retrieved again.
+ */
+export interface BundleShareCreatedDTO extends BundleShareDTO {
+  token: string;
+  url: string;
+}
+
+/** A single viewable rendition exposed to unauthenticated share recipients. */
+export interface PublicRenditionDTO {
+  name: RenditionName;
+  width: number;
+  height: number;
+  url: string;
+}
+
+/**
+ * Minimal, non-sensitive asset shape for unauthenticated share recipients.
+ * Deliberately omits internal identifiers (id/accountId/ownerId), the checksum,
+ * status/metadata provenance, and the original full-resolution download URL.
+ */
+export interface PublicAssetDTO {
+  title: string | null;
+  originalName: string;
+  format: string;
+  width: number | null;
+  height: number | null;
+  renditions: PublicRenditionDTO[];
+}
+
+export interface PublicBundleAssetDTO {
+  position: number;
+  asset: PublicAssetDTO;
+}
+
+/** Read-only, unauthenticated view of a shared bundle resolved by token. */
+export interface PublicBundleDTO {
+  title: string;
+  description: string | null;
+  items: PublicBundleAssetDTO[];
 }
 
 export interface AssetCommentDTO {

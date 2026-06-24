@@ -612,9 +612,251 @@ h3 {
 }
 
 /* ---------- Responsive (tablet & down) ---------- */
+/* ---------- Chips (e.g. attached bundles) ---------- */
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 12px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 100%;
+}
+
+.chip-label {
+  color: inherit;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip-remove {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(79, 70, 229, 0.15);
+  color: var(--primary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.chip-remove:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* ---------- Modal (hover screen) ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(20, 25, 46, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 20px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.modal-close {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.modal-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* ---------- Left navigation / app shell ---------- */
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-content {
+  margin-left: 248px;
+}
+
+.sidenav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 16px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 20;
+}
+
+.sidenav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  padding: 4px 8px 16px;
+}
+
+.sidenav-brand-name {
+  white-space: nowrap;
+}
+
+.sidenav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidenav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.sidenav-link:hover {
+  background: var(--surface-2);
+}
+
+.sidenav-link.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.sidenav-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sidenav-logout {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.sidenav-logout:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 @media (max-width: 900px) {
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+  .app-content {
+    margin-left: 0;
+    padding-bottom: 76px;
+  }
+  .sidenav {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+  .sidenav-brand,
+  .sidenav-logout span:not(.sidenav-icon) {
+    display: none;
+  }
+  .sidenav-links {
+    flex-direction: row;
+    flex: 1;
+    justify-content: space-around;
+  }
+  .sidenav-link span:not(.sidenav-icon) {
+    display: none;
+  }
+  .sidenav-logout {
+    margin-top: 0;
+    border: none;
   }
 }
 

@@ -28,6 +28,9 @@ const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS "AssetActivity" ("id" TEXT NOT NULL PRIMARY KEY,"accountId" TEXT NOT NULL,"assetId" TEXT NOT NULL,"actorId" TEXT,"type" TEXT NOT NULL,"summary" TEXT NOT NULL,"detailsJson" TEXT,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "AssetActivity_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "AssetActivity_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "AssetActivity_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS "Rendition" ("id" TEXT NOT NULL PRIMARY KEY,"assetId" TEXT NOT NULL,"name" TEXT NOT NULL,"storageKey" TEXT NOT NULL,"width" INTEGER NOT NULL,"height" INTEGER NOT NULL,"format" TEXT NOT NULL,"sizeBytes" INTEGER NOT NULL,CONSTRAINT "Rendition_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS "Publication" ("id" TEXT NOT NULL PRIMARY KEY,"assetId" TEXT NOT NULL,"channelId" TEXT NOT NULL,"status" TEXT NOT NULL,"reference" TEXT,"error" TEXT,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "Publication_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS "Bundle" ("id" TEXT NOT NULL PRIMARY KEY,"accountId" TEXT NOT NULL,"ownerId" TEXT NOT NULL,"title" TEXT NOT NULL,"description" TEXT,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL,CONSTRAINT "Bundle_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "Bundle_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS "BundleAsset" ("id" TEXT NOT NULL PRIMARY KEY,"bundleId" TEXT NOT NULL,"assetId" TEXT NOT NULL,"position" INTEGER NOT NULL DEFAULT 0,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "BundleAsset_bundleId_fkey" FOREIGN KEY ("bundleId") REFERENCES "Bundle" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "BundleAsset_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS "BundleShare" ("id" TEXT NOT NULL PRIMARY KEY,"bundleId" TEXT NOT NULL,"tokenHash" TEXT NOT NULL,"createdById" TEXT NOT NULL,"expiresAt" DATETIME,"revokedAt" DATETIME,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "BundleShare_bundleId_fkey" FOREIGN KEY ("bundleId") REFERENCES "Bundle" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "Account_slug_key" ON "Account"("slug")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "AccountSettings_accountId_key" ON "AccountSettings"("accountId")`,
@@ -53,6 +56,14 @@ const schemaStatements = [
   `CREATE INDEX IF NOT EXISTS "Rendition_assetId_idx" ON "Rendition"("assetId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "Rendition_assetId_name_key" ON "Rendition"("assetId", "name")`,
   `CREATE INDEX IF NOT EXISTS "Publication_assetId_idx" ON "Publication"("assetId")`,
+  `CREATE INDEX IF NOT EXISTS "Bundle_accountId_idx" ON "Bundle"("accountId")`,
+  `CREATE INDEX IF NOT EXISTS "Bundle_accountId_createdAt_idx" ON "Bundle"("accountId", "createdAt")`,
+  `CREATE INDEX IF NOT EXISTS "Bundle_ownerId_idx" ON "Bundle"("ownerId")`,
+  `CREATE INDEX IF NOT EXISTS "BundleAsset_bundleId_idx" ON "BundleAsset"("bundleId")`,
+  `CREATE INDEX IF NOT EXISTS "BundleAsset_assetId_idx" ON "BundleAsset"("assetId")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "BundleAsset_bundleId_assetId_key" ON "BundleAsset"("bundleId", "assetId")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "BundleShare_tokenHash_key" ON "BundleShare"("tokenHash")`,
+  `CREATE INDEX IF NOT EXISTS "BundleShare_bundleId_idx" ON "BundleShare"("bundleId")`,
 ];
 
 async function applySchema(prisma: PrismaClient): Promise<void> {

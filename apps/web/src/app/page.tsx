@@ -40,16 +40,11 @@ export default function GalleryPage() {
   const {
     client,
     isAuthenticated,
-    logout,
     accounts,
     activeAccount,
     permissions,
     switchAccount,
-    isSuperUser,
-    hasPermission,
   } = useAuth();
-  const canAdminAccount =
-    hasPermission("members:manage") || hasPermission("account:update");
   const router = useRouter();
   const [assets, setAssets] = useState<AssetDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,10 +113,7 @@ export default function GalleryPage() {
   return (
     <>
       <header className="appbar">
-        <div className="brand">
-          <span className="brand-mark">A</span>
-          AssetX
-        </div>
+        <div className="brand">Asset gallery</div>
         <div className="appbar-actions">
           {accounts.length > 0 && (
             <select
@@ -144,19 +136,6 @@ export default function GalleryPage() {
           >
             <span aria-hidden>＋</span>
             <span className="btn-label">{uploadLabel}</span>
-          </button>
-          {canAdminAccount && (
-            <Link className="btn secondary" href="/admin/account">
-              Account admin
-            </Link>
-          )}
-          {isSuperUser && (
-            <Link className="btn secondary" href="/admin/platform">
-              Platform admin
-            </Link>
-          )}
-          <button className="btn secondary" onClick={logout}>
-            Log out
           </button>
           <input
             ref={fileInput}

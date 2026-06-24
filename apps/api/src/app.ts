@@ -6,6 +6,7 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerAccountRoutes } from "./routes/accounts.js";
 import { registerAdminUserRoutes } from "./routes/admin-users.js";
 import { registerAssetRoutes } from "./routes/assets.js";
+import { registerBundleRoutes } from "./routes/bundles.js";
 import { registerPublishRoutes } from "./routes/publish.js";
 import type { AppDependencies } from "./dependencies.js";
 
@@ -38,6 +39,7 @@ export async function buildApp(
   await registerAccountRoutes(app, deps);
   await registerAdminUserRoutes(app, deps);
   await registerAssetRoutes(app, deps);
+  await registerBundleRoutes(app, deps);
   await registerPublishRoutes(app, deps);
 
   await app.ready();
