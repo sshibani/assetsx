@@ -58,6 +58,15 @@ services:
     volumes:
       - ./:/app
       - app-node-modules:/app/node_modules
+      - api-node-modules:/app/apps/api/node_modules
+      - worker-node-modules:/app/apps/worker/node_modules
+      - web-node-modules:/app/apps/web/node_modules
+      - pkg-auth-node-modules:/app/packages/auth/node_modules
+      - pkg-image-processing-node-modules:/app/packages/image-processing/node_modules
+      - pkg-publishing-node-modules:/app/packages/publishing/node_modules
+      - pkg-queue-node-modules:/app/packages/queue/node_modules
+      - pkg-shared-types-node-modules:/app/packages/shared-types/node_modules
+      - pkg-storage-node-modules:/app/packages/storage/node_modules
       - pkg-auth-dist:/app/packages/auth/dist
       - pkg-image-processing-dist:/app/packages/image-processing/dist
       - pkg-publishing-dist:/app/packages/publishing/dist
@@ -78,6 +87,15 @@ services:
     volumes:
       - ./:/app
       - app-node-modules:/app/node_modules
+      - api-node-modules:/app/apps/api/node_modules
+      - worker-node-modules:/app/apps/worker/node_modules
+      - web-node-modules:/app/apps/web/node_modules
+      - pkg-auth-node-modules:/app/packages/auth/node_modules
+      - pkg-image-processing-node-modules:/app/packages/image-processing/node_modules
+      - pkg-publishing-node-modules:/app/packages/publishing/node_modules
+      - pkg-queue-node-modules:/app/packages/queue/node_modules
+      - pkg-shared-types-node-modules:/app/packages/shared-types/node_modules
+      - pkg-storage-node-modules:/app/packages/storage/node_modules
       - pkg-auth-dist:/app/packages/auth/dist
       - pkg-image-processing-dist:/app/packages/image-processing/dist
       - pkg-publishing-dist:/app/packages/publishing/dist
@@ -105,6 +123,15 @@ services:
     volumes:
       - ./:/app
       - app-node-modules:/app/node_modules
+      - api-node-modules:/app/apps/api/node_modules
+      - worker-node-modules:/app/apps/worker/node_modules
+      - web-node-modules:/app/apps/web/node_modules
+      - pkg-auth-node-modules:/app/packages/auth/node_modules
+      - pkg-image-processing-node-modules:/app/packages/image-processing/node_modules
+      - pkg-publishing-node-modules:/app/packages/publishing/node_modules
+      - pkg-queue-node-modules:/app/packages/queue/node_modules
+      - pkg-shared-types-node-modules:/app/packages/shared-types/node_modules
+      - pkg-storage-node-modules:/app/packages/storage/node_modules
       - pkg-auth-dist:/app/packages/auth/dist
       - pkg-image-processing-dist:/app/packages/image-processing/dist
       - pkg-publishing-dist:/app/packages/publishing/dist
@@ -126,6 +153,10 @@ services:
     volumes:
       - ./:/app
       - app-node-modules:/app/node_modules
+      - api-node-modules:/app/apps/api/node_modules
+      - worker-node-modules:/app/apps/worker/node_modules
+      - web-node-modules:/app/apps/web/node_modules
+      - pkg-shared-types-node-modules:/app/packages/shared-types/node_modules
       - pkg-shared-types-dist:/app/packages/shared-types/dist
       - web-next-cache:/app/apps/web/.next
     depends_on:
@@ -135,8 +166,17 @@ services:
 volumes:
   redis-data:
   app-node-modules:
+  api-node-modules:
+  worker-node-modules:
+  web-node-modules:
   app-data:
   web-next-cache:
+  pkg-auth-node-modules:
+  pkg-image-processing-node-modules:
+  pkg-publishing-node-modules:
+  pkg-queue-node-modules:
+  pkg-shared-types-node-modules:
+  pkg-storage-node-modules:
   pkg-auth-dist:
   pkg-image-processing-dist:
   pkg-publishing-dist:
