@@ -232,6 +232,14 @@ describe("ApiClient bundle methods", () => {
     expect(init.method).toBe("DELETE");
   });
 
+  it("lists the bundles containing an asset", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [] }));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.listAssetBundles("a1");
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/assets/a1/bundles");
+  });
+
   it("creates a share with POST", async () => {
     const fetchMock = vi
       .fn()

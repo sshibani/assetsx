@@ -47,6 +47,20 @@ export async function registerBundleRoutes(
     }
   });
 
+  app.get(
+    "/api/assets/:id/bundles",
+    { preHandler: authGuard },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      try {
+        const items = await service.listForAsset(id, request.user!);
+        return reply.send({ items });
+      } catch (err) {
+        return handleError(reply, err);
+      }
+    },
+  );
+
   app.post("/api/bundles", { preHandler: authGuard }, async (request, reply) => {
     const parsed = createSchema.safeParse(request.body);
     if (!parsed.success) {

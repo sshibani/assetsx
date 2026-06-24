@@ -294,6 +294,13 @@ export class ApiClient {
     return this.request<BundleDetailDTO>(`/api/bundles/${id}`);
   }
 
+  /** Bundles in the account that contain the given asset. */
+  async listAssetBundles(assetId: string): Promise<{ items: BundleDTO[] }> {
+    return this.request<{ items: BundleDTO[] }>(
+      `/api/assets/${assetId}/bundles`,
+    );
+  }
+
   async createBundle(data: {
     title: string;
     description?: string;

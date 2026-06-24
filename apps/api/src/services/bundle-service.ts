@@ -71,6 +71,31 @@ export class BundleService {
     return bundles.map((b) => this.toDTO(b, b._count.items));
   }
 
+  /** List the bundles (in the user's account) that contain the given asset. */
+  async listForAsset(assetId: string, user: AuthUser): Promise<BundleDTO[]> {
+    if (!hasPermission(user, "bundles:read")) {
+      throw new BundleError("Forbidden", 403);
+    }
+
+    const asset = await this.prisma.asset.findUnique({
+      where: { id: assetId },
+    });
+    if (!asset) throw new BundleError("Asset not found", 404);
+    if (!isSuperUser(user) && asset.accountId !== user.accountId) {
+      throw new BundleError("Forbidden", 403);
+    }
+
+    const bundles = await this.prisma.bundle.findMany({
+      where: {
+        accountId: asset.accountId,
+        items: { some: { assetId } },
+      },
+      orderBy: { createdAt: "desc" },
+      include: { _count: { select: { items: true } } },
+    });
+    return bundles.map((b) => this.toDTO(b, b._count.items));
+  }
+
   async create(user: AuthUser, input: CreateBundleInput): Promise<BundleDTO> {
     if (!hasPermission(user, "bundles:create")) {
       throw new BundleError("Forbidden", 403);

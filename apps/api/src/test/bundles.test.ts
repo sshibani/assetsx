@@ -180,6 +180,60 @@ describe("GET /api/bundles/:id", () => {
   });
 });
 
+describe("GET /api/assets/:id/bundles", () => {
+  it("lists the bundles that contain the asset", async () => {
+    const inA = (await createBundle(token, { title: "In A" })).json();
+    const inB = (await createBundle(token, { title: "In B" })).json();
+    await createBundle(token, { title: "Not in" });
+    const asset = await seedAsset(userId, accountId);
+
+    for (const b of [inA, inB]) {
+      await app.inject({
+        method: "POST",
+        url: `/api/bundles/${b.id}/assets`,
+        headers: authHeaders(token),
+        payload: { assetId: asset.id },
+      });
+    }
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/assets/${asset.id}/bundles`,
+      headers: authHeaders(token),
+    });
+    expect(res.statusCode).toBe(200);
+    const { items } = res.json();
+    expect(items.map((b: { title: string }) => b.title).sort()).toEqual([
+      "In A",
+      "In B",
+    ]);
+  });
+
+  it("returns an empty list when the asset is in no bundles", async () => {
+    const asset = await seedAsset(userId, accountId);
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/assets/${asset.id}/bundles`,
+      headers: authHeaders(token),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().items).toEqual([]);
+  });
+
+  it("forbids cross-account access", async () => {
+    const asset = await seedAsset(userId, accountId);
+    const other = await createUserWithToken(ctx, {
+      email: "peek@assetx.local",
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/assets/${asset.id}/bundles`,
+      headers: authHeaders(other.accessToken),
+    });
+    expect(res.statusCode).toBe(403);
+  });
+});
+
 describe("PATCH /api/bundles/:id", () => {
   it("updates title and description", async () => {
     const created = (await createBundle(token, { title: "Old" })).json();
