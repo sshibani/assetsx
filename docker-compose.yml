@@ -28,6 +28,10 @@ x-app-build: &app-build
 x-app-env: &app-env
   env_file:
     - .env
+  environment:
+    API_URL: http://api:3001
+    REDIS_HOST: redis
+    STORAGE_ROOT: /app/apps/api/storage-data
 
 services:
   redis:
