@@ -41,4 +41,27 @@ describe("shared-types constants", () => {
       "members:manage",
     );
   });
+
+  it("defines owner-only permissions", () => {
+    expect(PERMISSIONS).toContain("account:delete");
+    expect(PERMISSIONS).toContain("members:manage_admins");
+  });
+
+  it("grants owner-only permissions to account_owner only", () => {
+    const owner = permissionsForAccountRole("account_owner");
+    expect(owner).toContain("account:delete");
+    expect(owner).toContain("members:manage_admins");
+
+    const admin = permissionsForAccountRole("account_admin");
+    expect(admin).not.toContain("account:delete");
+    expect(admin).not.toContain("members:manage_admins");
+    // account_admin retains general member management
+    expect(admin).toContain("members:manage");
+  });
+
+  it("differentiates account_owner from account_admin", () => {
+    const owner = permissionsForAccountRole("account_owner");
+    const admin = permissionsForAccountRole("account_admin");
+    expect(owner).not.toEqual(admin);
+  });
 });

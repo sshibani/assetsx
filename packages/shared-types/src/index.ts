@@ -30,8 +30,10 @@ export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
 export const PERMISSIONS = [
   "account:read",
   "account:update",
+  "account:delete",
   "members:read",
   "members:manage",
+  "members:manage_admins",
   "assets:read",
   "assets:create",
   "assets:update",
@@ -47,8 +49,10 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
   account_owner: [
     "account:read",
     "account:update",
+    "account:delete",
     "members:read",
     "members:manage",
+    "members:manage_admins",
     "assets:read",
     "assets:create",
     "assets:update",
@@ -197,6 +201,17 @@ export interface AccountMembershipDTO {
   updatedAt: string;
 }
 
+export const DATE_TIME_FORMATS = ["ISO", "US", "EU"] as const;
+export type DateTimeFormat = (typeof DATE_TIME_FORMATS)[number];
+
+export interface AccountSettingsDTO {
+  accountId: string;
+  dateTimeFormat: DateTimeFormat;
+  timezone: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AuthAccountContext {
   account: AccountDTO;
   membership: AccountMembershipDTO;
@@ -218,6 +233,20 @@ export interface UserDTO {
   email: string;
   globalRole: GlobalRole;
   createdAt: string;
+}
+
+export interface SignupRequest {
+  accountName: string;
+  email: string;
+  password: string;
+}
+
+export interface AdminUserDTO extends UserDTO {
+  accountCount: number;
+}
+
+export interface AdminUserDetailDTO extends UserDTO {
+  memberships: AccountMembershipDTO[];
 }
 
 export interface AuthTokens {
