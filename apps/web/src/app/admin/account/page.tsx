@@ -28,7 +28,7 @@ export default function AccountAdminPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<AccountRole>("asset_viewer");
+  const [newRole, setNewRole] = useState<AccountRole>("account_viewer");
 
   const load = useCallback(async () => {
     if (!accountId) return;
@@ -84,7 +84,7 @@ export default function AccountAdminPage() {
     await handle(async () => {
       await client.addMember(accountId, newEmail, newRole);
       setNewEmail("");
-      setNewRole("asset_viewer");
+      setNewRole("account_viewer");
     });
   };
 
@@ -244,7 +244,7 @@ export default function AccountAdminPage() {
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value as AccountRole)}
                   >
-                    {roleOptions("asset_viewer").map((r) => (
+                    {roleOptions("account_viewer").map((r) => (
                       <option key={r} value={r}>
                         {r}
                       </option>

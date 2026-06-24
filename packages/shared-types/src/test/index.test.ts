@@ -28,11 +28,17 @@ describe("shared-types constants", () => {
     expect(USER_ROLES).toEqual(["super_user", "user"]);
   });
 
+  it("defines exactly the three account roles", () => {
+    expect(ACCOUNT_ROLES).toEqual([
+      "account_owner",
+      "account_editor",
+      "account_viewer",
+    ]);
+  });
+
   it("defines account roles and permissions", () => {
-    expect(ACCOUNT_ROLES).toContain("account_owner");
-    expect(ACCOUNT_ROLES).toContain("asset_viewer");
     expect(PERMISSIONS).toContain("assets:publish");
-    expect(permissionsForAccountRole("asset_viewer")).toEqual([
+    expect(permissionsForAccountRole("account_viewer")).toEqual([
       "account:read",
       "assets:read",
       "comments:read",
@@ -47,21 +53,34 @@ describe("shared-types constants", () => {
     expect(PERMISSIONS).toContain("members:manage_admins");
   });
 
-  it("grants owner-only permissions to account_owner only", () => {
+  it("grants member & account management to account_owner only", () => {
     const owner = permissionsForAccountRole("account_owner");
     expect(owner).toContain("account:delete");
     expect(owner).toContain("members:manage_admins");
+    expect(owner).toContain("members:manage");
+    expect(owner).toContain("account:update");
 
-    const admin = permissionsForAccountRole("account_admin");
-    expect(admin).not.toContain("account:delete");
-    expect(admin).not.toContain("members:manage_admins");
-    // account_admin retains general member management
-    expect(admin).toContain("members:manage");
+    const editor = permissionsForAccountRole("account_editor");
+    expect(editor).not.toContain("account:delete");
+    expect(editor).not.toContain("members:manage_admins");
+    expect(editor).not.toContain("members:manage");
+    expect(editor).not.toContain("account:update");
   });
 
-  it("differentiates account_owner from account_admin", () => {
+  it("lets account_editor manage assets", () => {
+    const editor = permissionsForAccountRole("account_editor");
+    expect(editor).toContain("assets:create");
+    expect(editor).toContain("assets:update");
+    expect(editor).toContain("assets:delete");
+    expect(editor).toContain("assets:publish");
+    expect(editor).toContain("comments:create");
+  });
+
+  it("differentiates the three roles", () => {
     const owner = permissionsForAccountRole("account_owner");
-    const admin = permissionsForAccountRole("account_admin");
-    expect(owner).not.toEqual(admin);
+    const editor = permissionsForAccountRole("account_editor");
+    const viewer = permissionsForAccountRole("account_viewer");
+    expect(owner).not.toEqual(editor);
+    expect(editor).not.toEqual(viewer);
   });
 });

@@ -113,9 +113,17 @@ async function main(): Promise<void> {
       randomUUID(),
       accountId,
       user.id,
-      user.globalRole === "super_user" ? "account_owner" : "asset_manager",
+      user.globalRole === "super_user" ? "account_owner" : "account_editor",
     );
   }
+
+  // Migrate legacy account roles to the reduced owner/editor/viewer model.
+  await prisma.$executeRawUnsafe(
+    `UPDATE "AccountMembership" SET "role" = 'account_editor' WHERE "role" IN ('account_admin', 'asset_manager')`,
+  );
+  await prisma.$executeRawUnsafe(
+    `UPDATE "AccountMembership" SET "role" = 'account_viewer' WHERE "role" = 'asset_viewer'`,
+  );
 
   await prisma.$executeRawUnsafe(
     `UPDATE "Asset" SET "accountId" = ? WHERE "accountId" IS NULL`,

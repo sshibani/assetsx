@@ -64,7 +64,7 @@ model AccountMembership {
   id        String   @id @default(uuid())
   accountId String
   userId    String
-  role      String   // account_owner | account_admin | asset_manager | asset_viewer
+  role      String   // account_owner | account_editor | account_viewer
   status    String   @default("active") // active | disabled
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

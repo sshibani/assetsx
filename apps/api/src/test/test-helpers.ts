@@ -131,7 +131,7 @@ export async function createUserWithToken(
   options: {
     email?: string;
     role?: "admin" | "user" | "super_user";
-    accountRole?: "account_owner" | "account_admin" | "asset_manager" | "asset_viewer";
+    accountRole?: "account_owner" | "account_editor" | "account_viewer";
     accountId?: string;
   } = {},
 ): Promise<{ userId: string; accountId: string | null; accessToken: string }> {
@@ -158,7 +158,7 @@ export async function createUserWithToken(
       data: {
         accountId: account.id,
         userId: user.id,
-        role: options.accountRole ?? "asset_manager",
+        role: options.accountRole ?? "account_editor",
       },
     });
   }
@@ -166,9 +166,9 @@ export async function createUserWithToken(
     sub: user.id,
     globalRole,
     accountId: account?.id ?? null,
-    accountRole: account ? options.accountRole ?? "asset_manager" : null,
+    accountRole: account ? options.accountRole ?? "account_editor" : null,
     permissions: account
-      ? permissionsForAccountRole(options.accountRole ?? "asset_manager")
+      ? permissionsForAccountRole(options.accountRole ?? "account_editor")
       : ["platform:manage"],
     identityProvider: "local",
     sessionId: randomUUID(),

@@ -78,7 +78,7 @@ describe("account memberships", () => {
       method: "POST",
       url: `/api/accounts/${owner.accountId}/members`,
       headers: { authorization: `Bearer ${owner.accessToken}` },
-      payload: { email: `user-${member.userId}@assetx.local`, role: "asset_viewer" },
+      payload: { email: `user-${member.userId}@assetx.local`, role: "account_viewer" },
     });
     expect(add.statusCode).toBe(404);
 
@@ -89,23 +89,23 @@ describe("account memberships", () => {
       method: "POST",
       url: `/api/accounts/${owner.accountId}/members`,
       headers: { authorization: `Bearer ${owner.accessToken}` },
-      payload: { email: actualMember!.email, role: "asset_viewer" },
+      payload: { email: actualMember!.email, role: "account_viewer" },
     });
     expect(added.statusCode).toBe(201);
-    expect(added.json().role).toBe("asset_viewer");
+    expect(added.json().role).toBe("account_viewer");
 
     const updated = await app.inject({
       method: "PATCH",
       url: `/api/accounts/${owner.accountId}/members/${added.json().id}`,
       headers: { authorization: `Bearer ${owner.accessToken}` },
-      payload: { role: "asset_manager" },
+      payload: { role: "account_editor" },
     });
     expect(updated.statusCode).toBe(200);
-    expect(updated.json().role).toBe("asset_manager");
+    expect(updated.json().role).toBe("account_editor");
   });
 
   it("forbids viewers from managing members", async () => {
-    const viewer = await createUserWithToken(ctx, { accountRole: "asset_viewer" });
+    const viewer = await createUserWithToken(ctx, { accountRole: "account_viewer" });
     const res = await app.inject({
       method: "GET",
       url: `/api/accounts/${viewer.accountId}/members`,
@@ -123,7 +123,7 @@ describe("account memberships", () => {
       method: "PATCH",
       url: `/api/accounts/${owner.accountId}/members/${ownMembership.id}`,
       headers: { authorization: `Bearer ${owner.accessToken}` },
-      payload: { role: "asset_manager" },
+      payload: { role: "account_editor" },
     });
     expect(res.statusCode).toBe(409);
   });
@@ -142,14 +142,14 @@ describe("account memberships", () => {
     expect(res.statusCode).toBe(409);
   });
 
-  it("forbids account_admin from assigning the account_owner role", async () => {
+  it("forbids account_editor from managing members", async () => {
     const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
-    const admin = await createUserWithToken(ctx, {
-      accountRole: "account_admin",
+    const editor = await createUserWithToken(ctx, {
+      accountRole: "account_editor",
       accountId: owner.accountId!,
     });
     const target = await createUserWithToken(ctx, {
-      accountRole: "asset_viewer",
+      accountRole: "account_viewer",
       accountId: owner.accountId!,
     });
     const targetMembership = await ctx.prisma.accountMembership.findFirstOrThrow({
@@ -158,8 +158,8 @@ describe("account memberships", () => {
     const res = await app.inject({
       method: "PATCH",
       url: `/api/accounts/${owner.accountId}/members/${targetMembership.id}`,
-      headers: { authorization: `Bearer ${admin.accessToken}` },
-      payload: { role: "account_owner" },
+      headers: { authorization: `Bearer ${editor.accessToken}` },
+      payload: { role: "account_viewer" },
     });
     expect(res.statusCode).toBe(403);
   });
@@ -167,7 +167,7 @@ describe("account memberships", () => {
   it("lets an owner delete a non-owner member", async () => {
     const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
     const target = await createUserWithToken(ctx, {
-      accountRole: "asset_viewer",
+      accountRole: "account_viewer",
       accountId: owner.accountId!,
     });
     const targetMembership = await ctx.prisma.accountMembership.findFirstOrThrow({
@@ -238,7 +238,7 @@ describe("account settings", () => {
   });
 
   it("forbids viewers from updating settings", async () => {
-    const viewer = await createUserWithToken(ctx, { accountRole: "asset_viewer" });
+    const viewer = await createUserWithToken(ctx, { accountRole: "account_viewer" });
     const res = await app.inject({
       method: "PUT",
       url: `/api/accounts/${viewer.accountId}/settings`,

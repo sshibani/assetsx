@@ -67,7 +67,7 @@ describe("GET /api/admin/users/:userId", () => {
     const superUser = await createUserWithToken(ctx, { role: "super_user" });
     const member = await createUserWithToken(ctx, {
       email: "member@x.test",
-      accountRole: "asset_manager",
+      accountRole: "account_editor",
     });
 
     const res = await app.inject({
@@ -78,7 +78,7 @@ describe("GET /api/admin/users/:userId", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().email).toBe("member@x.test");
     expect(res.json().memberships).toHaveLength(1);
-    expect(res.json().memberships[0].role).toBe("asset_manager");
+    expect(res.json().memberships[0].role).toBe("account_editor");
   });
 
   it("returns 404 for an unknown user", async () => {

@@ -14,7 +14,7 @@ const claims = {
   sub: "user-1",
   globalRole: "user" as const,
   accountId: "account-1",
-  accountRole: "asset_manager" as const,
+  accountRole: "account_editor" as const,
   permissions: ["assets:read", "assets:create"] as const,
   identityProvider: "local",
   sessionId: "session-1",
@@ -28,7 +28,7 @@ describe("TokenService access tokens", () => {
     expect(decoded.sub).toBe("user-1");
     expect(decoded.globalRole).toBe("user");
     expect(decoded.accountId).toBe("account-1");
-    expect(decoded.accountRole).toBe("asset_manager");
+    expect(decoded.accountRole).toBe("account_editor");
     expect(decoded.permissions).toContain("assets:create");
     expect(decoded.identityProvider).toBe("local");
     expect(decoded.iss).toBe("assetx-test");

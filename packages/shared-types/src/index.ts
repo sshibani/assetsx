@@ -15,9 +15,8 @@ export type GlobalRole = UserRole;
 
 export const ACCOUNT_ROLES = [
   "account_owner",
-  "account_admin",
-  "asset_manager",
-  "asset_viewer",
+  "account_editor",
+  "account_viewer",
 ] as const;
 export type AccountRole = (typeof ACCOUNT_ROLES)[number];
 
@@ -61,20 +60,7 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "comments:read",
     "comments:create",
   ],
-  account_admin: [
-    "account:read",
-    "account:update",
-    "members:read",
-    "members:manage",
-    "assets:read",
-    "assets:create",
-    "assets:update",
-    "assets:delete",
-    "assets:publish",
-    "comments:read",
-    "comments:create",
-  ],
-  asset_manager: [
+  account_editor: [
     "account:read",
     "assets:read",
     "assets:create",
@@ -84,7 +70,7 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "comments:read",
     "comments:create",
   ],
-  asset_viewer: ["account:read", "assets:read", "comments:read"],
+  account_viewer: ["account:read", "assets:read", "comments:read"],
 };
 
 export function permissionsForAccountRole(role: AccountRole): Permission[] {

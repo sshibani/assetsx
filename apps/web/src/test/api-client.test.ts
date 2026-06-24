@@ -93,16 +93,16 @@ describe("ApiClient admin & settings methods", () => {
   it("adds a member", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValue(jsonResponse({ id: "m1", role: "asset_viewer" }));
+      .mockResolvedValue(jsonResponse({ id: "m1", role: "account_viewer" }));
     const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
     client.setAccessToken("t");
-    await client.addMember("a1", "u@x.test", "asset_viewer");
+    await client.addMember("a1", "u@x.test", "account_viewer");
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe("/api/accounts/a1/members");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toEqual({
       email: "u@x.test",
-      role: "asset_viewer",
+      role: "account_viewer",
     });
   });
 

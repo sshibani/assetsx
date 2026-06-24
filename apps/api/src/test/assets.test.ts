@@ -332,7 +332,7 @@ describe("asset comments and activity", () => {
     const created = (await uploadImage(token)).json();
     const viewer = await createUserWithToken(ctx, {
       accountId,
-      accountRole: "asset_viewer",
+      accountRole: "account_viewer",
     });
 
     const timelineRes = await app.inject({
