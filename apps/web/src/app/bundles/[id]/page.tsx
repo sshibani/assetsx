@@ -24,6 +24,8 @@ export default function BundleDetailPage() {
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     const [b, allAssets] = await Promise.all([
@@ -76,9 +78,21 @@ export default function BundleDetailPage() {
 
   const removeAsset = async (assetId: string) => {
     if (!canUpdate) return;
-    if (!confirm("Remove this asset from the bundle?")) return;
-    await client.removeAssetFromBundle(id, assetId);
-    await load();
+    // Optimistic: drop it from the list immediately; reload to restore on error.
+    setBundle((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.filter((item) => item.assetId !== assetId),
+            assetCount: Math.max(0, current.assetCount - 1),
+          }
+        : current,
+    );
+    try {
+      await client.removeAssetFromBundle(id, assetId);
+    } catch {
+      await load();
+    }
   };
 
   const createShare = async () => {
@@ -99,11 +113,15 @@ export default function BundleDetailPage() {
     }
   };
 
-  const remove = async () => {
+  const confirmDelete = async () => {
     if (!canDelete) return;
-    if (!confirm("Delete this bundle?")) return;
-    await client.deleteBundle(id);
-    router.push("/bundles");
+    setDeleting(true);
+    try {
+      await client.deleteBundle(id);
+      router.push("/bundles");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (!bundle) {
@@ -130,7 +148,11 @@ export default function BundleDetailPage() {
               Saved
             </span>
           )}
-          <button className="btn danger" onClick={remove} disabled={!canDelete}>
+          <button
+            className="btn danger"
+            onClick={() => setConfirmDeleteOpen(true)}
+            disabled={!canDelete}
+          >
             Delete
           </button>
         </div>
@@ -291,6 +313,51 @@ export default function BundleDetailPage() {
           </div>
         </div>
       </main>
+
+      {confirmDeleteOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Delete bundle"
+          onClick={() => setConfirmDeleteOpen(false)}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="section-title" style={{ margin: 0 }}>
+                Delete bundle
+              </h3>
+              <button
+                type="button"
+                className="modal-close"
+                aria-label="Close"
+                onClick={() => setConfirmDeleteOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <p style={{ color: "var(--text-muted)", marginTop: 0 }}>
+              Delete <strong>{bundle.title}</strong>? This removes the bundle and
+              its asset links. The assets themselves are not deleted.
+            </p>
+            <div className="modal-actions">
+              <button
+                className="btn secondary"
+                onClick={() => setConfirmDeleteOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn danger"
+                onClick={confirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Delete bundle"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
