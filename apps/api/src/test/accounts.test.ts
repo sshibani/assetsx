@@ -78,7 +78,7 @@ describe("account memberships", () => {
       method: "POST",
       url: `/api/accounts/${owner.accountId}/members`,
       headers: { authorization: `Bearer ${owner.accessToken}` },
-      payload: { email: `user-${member.userId}@assetx.local`, role: "asset_viewer" },
+      payload: { email: `user-${member.userId}@assetx.local`, role: "account_viewer" },
     });
     expect(add.statusCode).toBe(404);
 
@@ -89,27 +89,161 @@ describe("account memberships", () => {
       method: "POST",
       url: `/api/accounts/${owner.accountId}/members`,
       headers: { authorization: `Bearer ${owner.accessToken}` },
-      payload: { email: actualMember!.email, role: "asset_viewer" },
+      payload: { email: actualMember!.email, role: "account_viewer" },
     });
     expect(added.statusCode).toBe(201);
-    expect(added.json().role).toBe("asset_viewer");
+    expect(added.json().role).toBe("account_viewer");
 
     const updated = await app.inject({
       method: "PATCH",
       url: `/api/accounts/${owner.accountId}/members/${added.json().id}`,
       headers: { authorization: `Bearer ${owner.accessToken}` },
-      payload: { role: "asset_manager" },
+      payload: { role: "account_editor" },
     });
     expect(updated.statusCode).toBe(200);
-    expect(updated.json().role).toBe("asset_manager");
+    expect(updated.json().role).toBe("account_editor");
   });
 
   it("forbids viewers from managing members", async () => {
-    const viewer = await createUserWithToken(ctx, { accountRole: "asset_viewer" });
+    const viewer = await createUserWithToken(ctx, { accountRole: "account_viewer" });
     const res = await app.inject({
       method: "GET",
       url: `/api/accounts/${viewer.accountId}/members`,
       headers: { authorization: `Bearer ${viewer.accessToken}` },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("prevents demoting the last account_owner", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const ownMembership = await ctx.prisma.accountMembership.findFirstOrThrow({
+      where: { accountId: owner.accountId!, userId: owner.userId },
+    });
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/accounts/${owner.accountId}/members/${ownMembership.id}`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+      payload: { role: "account_editor" },
+    });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it("prevents disabling the last account_owner", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const ownMembership = await ctx.prisma.accountMembership.findFirstOrThrow({
+      where: { accountId: owner.accountId!, userId: owner.userId },
+    });
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/accounts/${owner.accountId}/members/${ownMembership.id}`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+      payload: { status: "disabled" },
+    });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it("forbids account_editor from managing members", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const editor = await createUserWithToken(ctx, {
+      accountRole: "account_editor",
+      accountId: owner.accountId!,
+    });
+    const target = await createUserWithToken(ctx, {
+      accountRole: "account_viewer",
+      accountId: owner.accountId!,
+    });
+    const targetMembership = await ctx.prisma.accountMembership.findFirstOrThrow({
+      where: { accountId: owner.accountId!, userId: target.userId },
+    });
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/accounts/${owner.accountId}/members/${targetMembership.id}`,
+      headers: { authorization: `Bearer ${editor.accessToken}` },
+      payload: { role: "account_viewer" },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("lets an owner delete a non-owner member", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const target = await createUserWithToken(ctx, {
+      accountRole: "account_viewer",
+      accountId: owner.accountId!,
+    });
+    const targetMembership = await ctx.prisma.accountMembership.findFirstOrThrow({
+      where: { accountId: owner.accountId!, userId: target.userId },
+    });
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/api/accounts/${owner.accountId}/members/${targetMembership.id}`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(res.statusCode).toBe(204);
+    const gone = await ctx.prisma.accountMembership.findUnique({
+      where: { id: targetMembership.id },
+    });
+    expect(gone).toBeNull();
+  });
+});
+
+describe("account settings", () => {
+  it("returns default settings for an account", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    await ctx.prisma.accountSettings.create({
+      data: { accountId: owner.accountId! },
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/accounts/${owner.accountId}/settings`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().dateTimeFormat).toBe("ISO");
+    expect(res.json().timezone).toBe("UTC");
+  });
+
+  it("auto-creates settings if missing on read", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/accounts/${owner.accountId}/settings`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().accountId).toBe(owner.accountId);
+  });
+
+  it("lets an owner update settings", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/accounts/${owner.accountId}/settings`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+      payload: { dateTimeFormat: "EU", timezone: "Europe/Paris" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().dateTimeFormat).toBe("EU");
+    expect(res.json().timezone).toBe("Europe/Paris");
+  });
+
+  it("rejects an invalid dateTimeFormat", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/accounts/${owner.accountId}/settings`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+      payload: { dateTimeFormat: "BOGUS" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("forbids viewers from updating settings", async () => {
+    const viewer = await createUserWithToken(ctx, { accountRole: "account_viewer" });
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/accounts/${viewer.accountId}/settings`,
+      headers: { authorization: `Bearer ${viewer.accessToken}` },
+      payload: { timezone: "UTC" },
     });
     expect(res.statusCode).toBe(403);
   });

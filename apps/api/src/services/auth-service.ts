@@ -76,6 +76,55 @@ export class AuthService {
     return this.toUserDTO(user);
   }
 
+  async signup(
+    accountName: string,
+    email: string,
+    password: string,
+  ): Promise<AuthTokens> {
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      throw new AuthError("Email already registered", 409);
+    }
+    const slug = await this.uniqueSlug(this.slugFromName(accountName));
+    const userId = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email,
+          passwordHash: await hashPassword(password),
+          globalRole: "user",
+          identities: {
+            create: {
+              provider: "local",
+              providerSubject: email.toLowerCase(),
+              email,
+            },
+          },
+        },
+      });
+      const account = await tx.account.create({
+        data: {
+          name: accountName,
+          slug,
+          settings: { create: {} },
+        },
+      });
+      await tx.accountMembership.create({
+        data: {
+          accountId: account.id,
+          userId: created.id,
+          role: "account_owner",
+        },
+      });
+      return created.id;
+    });
+
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { memberships: { include: { account: true } } },
+    });
+    return this.issueTokens(user, this.defaultAccountId(user));
+  }
+
   async login(email: string, password: string): Promise<AuthTokens> {
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -149,6 +198,16 @@ export class AuthService {
     return this.issueTokens(user, claims.accountId);
   }
 
+  /** Returns the account contexts visible to a user (all active accounts for super users). */
+  async accountContextsForUser(userId: string): Promise<AuthAccountContext[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { memberships: { include: { account: true } } },
+    });
+    if (!user) throw new AuthError("User not found", 404);
+    return this.toAccountContexts(user);
+  }
+
   async logout(refreshToken: string): Promise<void> {
     const tokenHash = sha256(refreshToken);
     await this.prisma.refreshToken.updateMany({
@@ -162,7 +221,7 @@ export class AuthService {
     accountId: string | null,
   ): Promise<AuthTokens> {
     const sessionId = randomUUID();
-    const accountContext = this.toAccountContext(user, accountId);
+    const accountContext = await this.toAccountContext(user, accountId);
     const baseClaims = {
       sub: user.id,
       globalRole: user.globalRole as GlobalRole,
@@ -196,7 +255,7 @@ export class AuthService {
       refreshToken,
       user: this.toUserDTO(user),
       activeAccount: accountContext,
-      accounts: this.toAccountContexts(user),
+      accounts: await this.toAccountContexts(user),
     };
   }
 
@@ -209,25 +268,72 @@ export class AuthService {
     return membership?.accountId ?? null;
   }
 
-  private toAccountContexts(
+  private async toAccountContexts(
     user: User & { memberships: (AccountMembership & { account: Account })[] },
-  ): AuthAccountContext[] {
+  ): Promise<AuthAccountContext[]> {
+    // Super users can act in every active account, even without a membership.
+    if (user.globalRole === "super_user") {
+      const accounts = await this.prisma.account.findMany({
+        where: { status: "active" },
+        orderBy: { name: "asc" },
+      });
+      const membershipByAccount = new Map(
+        user.memberships.map((m) => [m.accountId, m]),
+      );
+      return accounts.map((account) => {
+        const membership = membershipByAccount.get(account.id);
+        if (membership) {
+          return this.toAccountContextFromMembership(
+            { ...membership, account },
+            user.email,
+          );
+        }
+        return this.superUserAccountContext(account, user);
+      });
+    }
+
     return user.memberships
       .filter((m) => m.status === "active" && m.account.status === "active")
       .map((m) => this.toAccountContextFromMembership(m, user.email));
   }
 
-  private toAccountContext(
+  private superUserAccountContext(
+    account: Account,
+    user: User,
+  ): AuthAccountContext {
+    return {
+      account: this.toAccountDTO(account),
+      membership: {
+        id: `super:${account.id}`,
+        accountId: account.id,
+        userId: user.id,
+        email: user.email,
+        role: "account_owner",
+        status: "active",
+        createdAt: account.createdAt.toISOString(),
+        updatedAt: account.updatedAt.toISOString(),
+      },
+      permissions: permissionsForAccountRole("account_owner"),
+    };
+  }
+
+  private async toAccountContext(
     user: User & { memberships: (AccountMembership & { account: Account })[] },
     accountId: string | null,
-  ): AuthAccountContext | null {
+  ): Promise<AuthAccountContext | null> {
     if (!accountId) return null;
     const membership = user.memberships.find((m) => m.accountId === accountId);
-    if (!membership) {
-      if (user.globalRole === "super_user") return null;
-      return null;
+    if (membership) {
+      return this.toAccountContextFromMembership(membership, user.email);
     }
-    return this.toAccountContextFromMembership(membership, user.email);
+    // Super users can have an active context in accounts without a membership.
+    if (user.globalRole === "super_user") {
+      const account = await this.prisma.account.findUnique({
+        where: { id: accountId },
+      });
+      if (account) return this.superUserAccountContext(account, user);
+    }
+    return null;
   }
 
   private toAccountContextFromMembership(
@@ -285,5 +391,27 @@ export class AuthService {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 40) || randomUUID();
+  }
+
+  private slugFromName(name: string): string {
+    return (
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 40) || randomUUID()
+    );
+  }
+
+  private async uniqueSlug(base: string): Promise<string> {
+    let candidate = base;
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const existing = await this.prisma.account.findUnique({
+        where: { slug: candidate },
+      });
+      if (!existing) return candidate;
+      candidate = `${base}-${randomUUID().slice(0, 6)}`.slice(0, 47);
+    }
+    return `${base}-${randomUUID()}`.slice(0, 60);
   }
 }

@@ -36,7 +36,7 @@ async function seedOwner(): Promise<{ userId: string; accountId: string }> {
     data: {
       accountId: account.id,
       userId: user.id,
-      role: "asset_manager",
+      role: "account_editor",
     },
   });
   return { userId: user.id, accountId: account.id };

@@ -43,6 +43,7 @@ async function main(): Promise<void> {
             create: {
               name: "Default",
               slug: "default",
+              settings: { create: {} },
             },
           },
         },

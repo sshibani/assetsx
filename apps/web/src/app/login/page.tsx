@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "../../lib/client-context";
 import { ApiError } from "../../lib/api-client";
 
@@ -80,6 +81,10 @@ export default function LoginPage() {
             {submitting ? "Signing in…" : "Log in"}
           </button>
         </form>
+
+        <p className="auth-sub" style={{ marginTop: 16 }}>
+          New to AssetX? <Link href="/signup">Create an account</Link>
+        </p>
       </div>
     </div>
   );

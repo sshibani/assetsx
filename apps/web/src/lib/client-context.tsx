@@ -18,7 +18,14 @@ interface AuthContextValue {
   accounts: AuthAccountContext[];
   activeAccount: AuthAccountContext | null;
   permissions: Permission[];
+  isSuperUser: boolean;
+  hasPermission: (permission: Permission) => boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (
+    accountName: string,
+    email: string,
+    password: string,
+  ) => Promise<void>;
   switchAccount: (accountId: string) => Promise<void>;
   logout: () => void;
 }
@@ -74,6 +81,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true);
   };
 
+  const signup = async (
+    accountName: string,
+    email: string,
+    password: string,
+  ) => {
+    const tokens = await client.signup(accountName, email, password);
+    localStorage.setItem(TOKEN_KEY, tokens.accessToken);
+    applyAuthContext(
+      tokens.user,
+      tokens.accounts,
+      tokens.activeAccount?.account.id ?? null,
+    );
+    setIsAuthenticated(true);
+  };
+
   const switchAccount = async (accountId: string) => {
     const tokens = await client.switchAccount(accountId);
     localStorage.setItem(TOKEN_KEY, tokens.accessToken);
@@ -90,6 +112,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false);
   };
 
+  const permissions = activeAccount?.permissions ?? [];
+  const isSuperUser = user?.globalRole === "super_user";
+  const hasPermission = (permission: Permission) =>
+    isSuperUser || permissions.includes(permission);
+
   return (
     <AuthContext.Provider
       value={{
@@ -98,8 +125,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         accounts,
         activeAccount,
-        permissions: activeAccount?.permissions ?? [],
+        permissions,
+        isSuperUser,
+        hasPermission,
         login,
+        signup,
         switchAccount,
         logout,
       }}

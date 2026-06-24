@@ -1,6 +1,7 @@
 import type {
   Account,
   AccountMembership,
+  AccountSettings,
   PrismaClient,
   User,
 } from "@prisma/client";
@@ -8,6 +9,9 @@ import type {
   AccountDTO,
   AccountMembershipDTO,
   AccountRole,
+  AccountSettingsDTO,
+  AdminAccountDTO,
+  DateTimeFormat,
 } from "@assetx/shared-types";
 import type { AuthUser } from "../authorization.js";
 import { hasPermission, isSuperUser } from "../authorization.js";
@@ -30,6 +34,32 @@ export class AccountService {
       orderBy: { account: { name: "asc" } },
     });
     return memberships.map((m) => this.toAccountDTO(m.account));
+  }
+
+  /** Platform admin: list every account (incl. disabled) with member counts. Super user only. */
+  async adminList(
+    user: AuthUser,
+    query: { q?: string } = {},
+  ): Promise<AdminAccountDTO[]> {
+    if (!isSuperUser(user)) throw new AssetError("Forbidden", 403);
+    const q = query.q?.trim().toLowerCase();
+    const where = q
+      ? {
+          OR: [
+            { name: { contains: q } },
+            { slug: { contains: q } },
+          ],
+        }
+      : undefined;
+    const accounts = await this.prisma.account.findMany({
+      where,
+      include: { _count: { select: { memberships: true } } },
+      orderBy: { name: "asc" },
+    });
+    return accounts.map((a) => ({
+      ...this.toAccountDTO(a),
+      memberCount: a._count.memberships,
+    }));
   }
 
   async create(
@@ -88,6 +118,9 @@ export class AccountService {
     input: { email: string; role: AccountRole },
   ): Promise<AccountMembershipDTO> {
     await this.assertAccountPermission(id, user, "members:manage");
+    if (input.role === "account_owner") {
+      await this.assertAccountPermission(id, user, "members:manage_admins");
+    }
     const member = await this.prisma.user.findUnique({
       where: { email: input.email },
     });
@@ -120,12 +153,93 @@ export class AccountService {
     if (!current || current.accountId !== accountId) {
       throw new AssetError("Membership not found", 404);
     }
+
+    // Assigning or modifying an account_owner requires owner-level rights.
+    if (input.role === "account_owner" || current.role === "account_owner") {
+      await this.assertAccountPermission(accountId, user, "members:manage_admins");
+    }
+
+    // Last-owner protection: a change that removes the final active owner is blocked.
+    const losesOwnerRole =
+      current.role === "account_owner" &&
+      ((input.role && input.role !== "account_owner") ||
+        input.status === "disabled");
+    if (losesOwnerRole) {
+      await this.assertNotLastOwner(accountId, membershipId);
+    }
+
     const membership = await this.prisma.accountMembership.update({
       where: { id: membershipId },
       data: input,
       include: { user: true },
     });
     return this.toMembershipDTO(membership, membership.user);
+  }
+
+  async deleteMember(
+    accountId: string,
+    membershipId: string,
+    user: AuthUser,
+  ): Promise<void> {
+    await this.assertAccountPermission(accountId, user, "members:manage");
+    const current = await this.prisma.accountMembership.findUnique({
+      where: { id: membershipId },
+    });
+    if (!current || current.accountId !== accountId) {
+      throw new AssetError("Membership not found", 404);
+    }
+    if (current.role === "account_owner") {
+      await this.assertAccountPermission(accountId, user, "members:manage_admins");
+      await this.assertNotLastOwner(accountId, membershipId);
+    }
+    await this.prisma.accountMembership.delete({ where: { id: membershipId } });
+  }
+
+  async getSettings(
+    accountId: string,
+    user: AuthUser,
+  ): Promise<AccountSettingsDTO> {
+    await this.assertAccountPermission(accountId, user, "account:read");
+    const settings = await this.prisma.accountSettings.upsert({
+      where: { accountId },
+      create: { accountId },
+      update: {},
+    });
+    return this.toSettingsDTO(settings);
+  }
+
+  async updateSettings(
+    accountId: string,
+    user: AuthUser,
+    input: { dateTimeFormat?: DateTimeFormat; timezone?: string },
+  ): Promise<AccountSettingsDTO> {
+    await this.assertAccountPermission(accountId, user, "account:update");
+    const settings = await this.prisma.accountSettings.upsert({
+      where: { accountId },
+      create: { accountId, ...input },
+      update: input,
+    });
+    return this.toSettingsDTO(settings);
+  }
+
+  private async assertNotLastOwner(
+    accountId: string,
+    excludingMembershipId: string,
+  ): Promise<void> {
+    const remainingOwners = await this.prisma.accountMembership.count({
+      where: {
+        accountId,
+        role: "account_owner",
+        status: "active",
+        id: { not: excludingMembershipId },
+      },
+    });
+    if (remainingOwners === 0) {
+      throw new AssetError(
+        "Cannot remove the last active account owner",
+        409,
+      );
+    }
   }
 
   private async assertAccountPermission(
@@ -149,6 +263,16 @@ export class AccountService {
       status: account.status as AccountDTO["status"],
       createdAt: account.createdAt.toISOString(),
       updatedAt: account.updatedAt.toISOString(),
+    };
+  }
+
+  private toSettingsDTO(settings: AccountSettings): AccountSettingsDTO {
+    return {
+      accountId: settings.accountId,
+      dateTimeFormat: settings.dateTimeFormat as DateTimeFormat,
+      timezone: settings.timezone,
+      createdAt: settings.createdAt.toISOString(),
+      updatedAt: settings.updatedAt.toISOString(),
     };
   }
 
