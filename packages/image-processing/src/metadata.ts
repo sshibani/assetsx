@@ -3,12 +3,24 @@ import type { ImageGpsDTO, ImageMetadataDTO } from "@assetx/shared-types";
 /** Loosely-typed bag of EXIF/IPTC/XMP fields as returned by exifr. */
 export type RawExif = Record<string, unknown>;
 
+/** Bound stored metadata so a crafted file can't inflate metadataJson. */
+const MAX_STRING_LENGTH = 256;
+const MAX_KEYWORDS = 50;
+
+function truncate(value: string): string {
+  return value.length > MAX_STRING_LENGTH
+    ? value.slice(0, MAX_STRING_LENGTH)
+    : value;
+}
+
 function str(value: unknown): string | null {
   if (typeof value === "string") {
     const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
+    return trimmed.length > 0 ? truncate(trimmed) : null;
   }
-  if (typeof value === "number") return String(value);
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
   return null;
 }
 
@@ -63,6 +75,8 @@ function gps(raw: RawExif): ImageGpsDTO | null {
   const lat = num(raw.latitude);
   const lng = num(raw.longitude);
   if (lat === null || lng === null) return null;
+  // Reject out-of-range/garbage coordinates.
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
   return {
     lat,
     lng,
@@ -70,24 +84,36 @@ function gps(raw: RawExif): ImageGpsDTO | null {
   };
 }
 
+const COLOR_SPACES: Record<number, string> = {
+  1: "sRGB",
+  2: "Adobe RGB",
+  65535: "Uncalibrated",
+};
+
+function colorSpace(raw: RawExif): string | null {
+  const value = raw.ColorSpace;
+  if (typeof value === "string") return str(value);
+  if (typeof value === "number") return COLOR_SPACES[value] ?? null;
+  return null;
+}
+
 function dpi(raw: RawExif): number | null {
-  // Prefer X resolution when the unit is inches.
   const x = num(raw.XResolution);
+  if (x === null) return null;
+  // EXIF ResolutionUnit: 2 = inches (DPI), 3 = centimeters. Only inches map to DPI.
   const unit = raw.ResolutionUnit;
-  if (x !== null && (unit === "inches" || unit === 2 || unit === undefined)) {
-    return Math.round(x);
-  }
-  return x !== null ? Math.round(x) : null;
+  if (unit === "cm" || unit === "centimeters" || unit === 3) return null;
+  return Math.round(x);
 }
 
 function keywords(raw: RawExif): string[] | null {
-  const value = raw.Keywords ?? raw.subject ?? raw.subjects;
-  if (Array.isArray(value)) {
-    const list = value.map((v) => str(v)).filter((v): v is string => v !== null);
-    return list.length > 0 ? list : null;
-  }
-  const single = str(value);
-  return single ? [single] : null;
+  const value = raw.Keywords ?? raw.subject;
+  const source = Array.isArray(value) ? value : value != null ? [value] : [];
+  const list = source
+    .map((v) => str(v))
+    .filter((v): v is string => v !== null)
+    .slice(0, MAX_KEYWORDS);
+  return list.length > 0 ? list : null;
 }
 
 /**
@@ -110,7 +136,7 @@ export function normalizeMetadata(raw: RawExif): ImageMetadataDTO | null {
     flash: flash(raw.Flash),
     gps: gps(raw),
     orientation: num(raw.Orientation),
-    colorSpace: str(raw.ColorSpace),
+    colorSpace: colorSpace(raw),
     dpi: dpi(raw),
     keywords: keywords(raw),
     creator: str(raw.Artist ?? raw.Creator ?? raw.byline),

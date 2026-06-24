@@ -43,8 +43,14 @@ export async function processAsset(
     }
 
     const info = await deps.processor.inspect(original);
-    const metadata = await deps.processor.extractMetadata(original);
-    const renditions = await deps.processor.process(original, DEFAULT_RENDITIONS);
+    // Metadata extraction is independent of rendition generation; run them
+    // concurrently so EXIF parsing doesn't add latency to the pipeline.
+    // extractMetadata never throws (returns null on failure), so Promise.all
+    // can only reject from process().
+    const [metadata, renditions] = await Promise.all([
+      deps.processor.extractMetadata(original),
+      deps.processor.process(original, DEFAULT_RENDITIONS),
+    ]);
 
     for (const rendition of renditions) {
       const ext = rendition.format === "jpeg" ? "jpg" : rendition.format;

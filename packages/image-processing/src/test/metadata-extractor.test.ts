@@ -141,4 +141,60 @@ describe("normalizeMetadata (unit)", () => {
       d.toISOString(),
     );
   });
+
+  it("returns null capturedAt for an invalid date string", () => {
+    expect(normalizeMetadata({ DateTimeOriginal: "not-a-date" })).toBeNull();
+  });
+
+  it("normalizes flash from numeric bitmask, string and boolean", () => {
+    expect(normalizeMetadata({ Flash: 1 })!.flash).toBe(true); // bit 0 set
+    expect(normalizeMetadata({ Flash: 0 })!.flash).toBe(false); // fired bit clear
+    expect(normalizeMetadata({ Flash: "Flash did not fire" })!.flash).toBe(
+      false,
+    );
+    expect(normalizeMetadata({ Flash: true })!.flash).toBe(true);
+  });
+
+  it("ignores non-positive exposure times", () => {
+    expect(normalizeMetadata({ ExposureTime: 0 })).toBeNull();
+    expect(normalizeMetadata({ ExposureTime: -1 })).toBeNull();
+  });
+
+  it("maps ColorSpace enum values to names", () => {
+    expect(normalizeMetadata({ ColorSpace: 1 })!.colorSpace).toBe("sRGB");
+    expect(normalizeMetadata({ ColorSpace: 65535 })!.colorSpace).toBe(
+      "Uncalibrated",
+    );
+    expect(normalizeMetadata({ ColorSpace: "Adobe RGB" })!.colorSpace).toBe(
+      "Adobe RGB",
+    );
+  });
+
+  it("treats DPI as null when the resolution unit is centimeters", () => {
+    expect(
+      normalizeMetadata({ XResolution: 72, ResolutionUnit: "cm" }),
+    ).toBeNull();
+    expect(
+      normalizeMetadata({ XResolution: 300, ResolutionUnit: "inches" })!.dpi,
+    ).toBe(300);
+  });
+
+  it("falls back to byline/rights for creator/copyright", () => {
+    const meta = normalizeMetadata({ byline: "Shooter", rights: "MIT" })!;
+    expect(meta.creator).toBe("Shooter");
+    expect(meta.copyright).toBe("MIT");
+  });
+
+  it("rejects out-of-range GPS coordinates", () => {
+    // Include a camera field so the object isn't dropped entirely.
+    const meta = normalizeMetadata({ Make: "X", latitude: 200, longitude: 4 })!;
+    expect(meta.gps).toBeNull();
+  });
+
+  it("caps keywords and truncates very long strings", () => {
+    const many = Array.from({ length: 80 }, (_, i) => `k${i}`);
+    expect(normalizeMetadata({ Keywords: many })!.keywords).toHaveLength(50);
+    const long = "x".repeat(500);
+    expect(normalizeMetadata({ Make: long })!.cameraMake!.length).toBe(256);
+  });
 });

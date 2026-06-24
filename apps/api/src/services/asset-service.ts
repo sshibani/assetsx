@@ -21,6 +21,7 @@ import {
 import type { AuthUser } from "../authorization.js";
 import { hasPermission, isSuperUser } from "../authorization.js";
 import { assetToDTO, originalKey } from "../mappers/asset-mapper.js";
+import { parseJsonObject } from "../lib/json.js";
 
 export class AssetError extends Error {
   constructor(
@@ -397,21 +398,9 @@ export class AssetService {
       actorEmail: actor?.email ?? null,
       type: activity.type as AssetActivityType,
       summary: activity.summary,
-      details: this.parseDetails(activity.detailsJson),
+      details: parseJsonObject(activity.detailsJson),
       createdAt: activity.createdAt.toISOString(),
     };
-  }
-
-  private parseDetails(value: string | null): Record<string, unknown> | null {
-    if (!value) return null;
-    try {
-      const parsed = JSON.parse(value);
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : null;
-    } catch {
-      return null;
-    }
   }
 
   private toDTO(asset: Asset, renditions: Rendition[]): AssetDTO {

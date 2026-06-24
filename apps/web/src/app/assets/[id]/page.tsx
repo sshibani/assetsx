@@ -75,14 +75,23 @@ function ExifPanel({ metadata }: { metadata: ImageMetadataDTO }) {
       timeStyle: "short",
     }).format(new Date(m.capturedAt));
   const exposure = [
-    m.exposureTime ? `${m.exposureTime}s` : null,
-    m.fNumber ? `f/${m.fNumber}` : null,
-    m.iso ? `ISO ${m.iso}` : null,
-    m.focalLength ? `${m.focalLength}mm` : null,
+    m.exposureTime != null ? `${m.exposureTime}s` : null,
+    m.fNumber != null ? `f/${m.fNumber}` : null,
+    m.iso != null ? `ISO ${m.iso}` : null,
+    m.focalLength != null ? `${m.focalLength}mm` : null,
   ]
     .filter(Boolean)
     .join(" · ");
-  const gps = m.gps;
+  // Only treat GPS as valid when both coordinates are finite, in-range numbers
+  // (metadataJson is parsed defensively and not deeply validated upstream).
+  const gps =
+    m.gps &&
+    Number.isFinite(m.gps.lat) &&
+    Number.isFinite(m.gps.lng) &&
+    Math.abs(m.gps.lat) <= 90 &&
+    Math.abs(m.gps.lng) <= 180
+      ? m.gps
+      : null;
   // Small bounding box around the point for the OSM embed.
   const bbox = gps
     ? [gps.lng - 0.01, gps.lat - 0.01, gps.lng + 0.01, gps.lat + 0.01].join(",")
