@@ -92,8 +92,15 @@ const COLOR_SPACES: Record<number, string> = {
 
 function colorSpace(raw: RawExif): string | null {
   const value = raw.ColorSpace;
-  if (typeof value === "string") return str(value);
   if (typeof value === "number") return COLOR_SPACES[value] ?? null;
+  if (typeof value === "string") {
+    // exifr may not translate the enum; map numeric-string sentinels too.
+    const asNumber = Number(value);
+    if (Number.isInteger(asNumber) && asNumber in COLOR_SPACES) {
+      return COLOR_SPACES[asNumber]!;
+    }
+    return str(value);
+  }
   return null;
 }
 

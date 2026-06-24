@@ -165,6 +165,11 @@ describe("normalizeMetadata (unit)", () => {
     expect(normalizeMetadata({ ColorSpace: 65535 })!.colorSpace).toBe(
       "Uncalibrated",
     );
+    // exifr may surface the enum as a numeric string; still map it.
+    expect(normalizeMetadata({ ColorSpace: "65535" })!.colorSpace).toBe(
+      "Uncalibrated",
+    );
+    expect(normalizeMetadata({ ColorSpace: "1" })!.colorSpace).toBe("sRGB");
     expect(normalizeMetadata({ ColorSpace: "Adobe RGB" })!.colorSpace).toBe(
       "Adobe RGB",
     );
