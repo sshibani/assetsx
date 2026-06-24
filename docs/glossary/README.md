@@ -19,6 +19,8 @@ represents and how it is used.
 | [Publication](./Publication.md) | A record of publishing an asset to a channel. |
 | [AssetComment](./AssetComment.md) | A user comment on an asset. |
 | [AssetActivity](./AssetActivity.md) | An append-only activity log entry for an asset. |
+| [Bundle](./Bundle.md) | An account-scoped, named collection that groups assets. |
+| [BundleAsset](./BundleAsset.md) | The join record linking an asset to a bundle (with ordering). |
 
 ## Roles
 
@@ -58,6 +60,9 @@ represents and how it is used.
 | [AccountMembershipDTO](./AccountMembershipDTO.md) | Public representation of a membership. |
 | [AccountSettingsDTO](./AccountSettingsDTO.md) | Public representation of account settings. |
 | [AssetDTO](./AssetDTO.md) | Public representation of an asset (with renditions). |
+| [BundleDTO](./BundleDTO.md) | Public representation of a bundle (with asset count). |
+| [BundleDetailDTO](./BundleDetailDTO.md) | A bundle with its full, ordered asset list. |
+| [BundleAssetDTO](./BundleAssetDTO.md) | A bundle entry: position + hydrated asset. |
 | [RenditionDTO](./RenditionDTO.md) | Public representation of a rendition. |
 | [PublicationDTO](./PublicationDTO.md) | Public representation of a publication. |
 | [AssetCommentDTO](./AssetCommentDTO.md) | Public representation of a comment. |

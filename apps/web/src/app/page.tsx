@@ -145,6 +145,11 @@ export default function GalleryPage() {
             <span aria-hidden>＋</span>
             <span className="btn-label">{uploadLabel}</span>
           </button>
+          {hasPermission("bundles:read") && (
+            <Link className="btn secondary" href="/bundles">
+              Bundles
+            </Link>
+          )}
           {canAdminAccount && (
             <Link className="btn secondary" href="/admin/account">
               Account admin

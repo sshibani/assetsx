@@ -154,6 +154,85 @@ describe("ApiClient admin & settings methods", () => {
   });
 });
 
+describe("ApiClient bundle methods", () => {
+  it("lists bundles", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [] }));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.listBundles();
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/bundles");
+  });
+
+  it("gets a bundle", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ id: "b1", items: [] }));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.getBundle("b1");
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/bundles/b1");
+  });
+
+  it("creates a bundle with POST", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ id: "b1", title: "New" }));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.createBundle({ title: "New", description: "d" });
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/bundles");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ title: "New", description: "d" });
+  });
+
+  it("updates a bundle with PATCH", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ id: "b1", title: "Renamed" }));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.updateBundle("b1", { title: "Renamed" });
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/bundles/b1");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body)).toEqual({ title: "Renamed" });
+  });
+
+  it("deletes a bundle with DELETE", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(null, 204));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.deleteBundle("b1");
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/bundles/b1");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("adds an asset to a bundle with POST", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ id: "b1", assetCount: 1 }));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.addAssetToBundle("b1", "a1");
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/bundles/b1/assets");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ assetId: "a1" });
+  });
+
+  it("removes an asset from a bundle with DELETE", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(null, 204));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.removeAssetFromBundle("b1", "a1");
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/bundles/b1/assets/a1");
+    expect(init.method).toBe("DELETE");
+  });
+});
+
 describe("ApiClient authenticated requests", () => {
   it("attaches the bearer token to requests", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [] }));

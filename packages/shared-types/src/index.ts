@@ -38,6 +38,10 @@ export const PERMISSIONS = [
   "assets:update",
   "assets:delete",
   "assets:publish",
+  "bundles:read",
+  "bundles:create",
+  "bundles:update",
+  "bundles:delete",
   "comments:read",
   "comments:create",
   "platform:manage",
@@ -57,6 +61,10 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "assets:update",
     "assets:delete",
     "assets:publish",
+    "bundles:read",
+    "bundles:create",
+    "bundles:update",
+    "bundles:delete",
     "comments:read",
     "comments:create",
   ],
@@ -67,10 +75,19 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "assets:update",
     "assets:delete",
     "assets:publish",
+    "bundles:read",
+    "bundles:create",
+    "bundles:update",
+    "bundles:delete",
     "comments:read",
     "comments:create",
   ],
-  account_viewer: ["account:read", "assets:read", "comments:read"],
+  account_viewer: [
+    "account:read",
+    "assets:read",
+    "bundles:read",
+    "comments:read",
+  ],
 };
 
 export function permissionsForAccountRole(role: AccountRole): Permission[] {
@@ -128,6 +145,27 @@ export interface AssetDTO {
   expiresAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BundleDTO {
+  id: string;
+  accountId: string;
+  ownerId: string;
+  title: string;
+  description: string | null;
+  assetCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BundleAssetDTO {
+  assetId: string;
+  position: number;
+  asset: AssetDTO;
+}
+
+export interface BundleDetailDTO extends BundleDTO {
+  items: BundleAssetDTO[];
 }
 
 export interface AssetCommentDTO {

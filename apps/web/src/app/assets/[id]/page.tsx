@@ -8,6 +8,7 @@ import { useAuth } from "../../../lib/client-context";
 import type {
   AssetDTO,
   AssetTimelineItemDTO,
+  BundleDTO,
   ChannelInfoLike,
   PublicationDTO,
 } from "../../../lib/types";
@@ -60,24 +61,32 @@ export default function AssetDetailPage() {
   const [commentSaving, setCommentSaving] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [saved, setSaved] = useState(false);
+  const [bundles, setBundles] = useState<BundleDTO[]>([]);
+  const [selectedBundle, setSelectedBundle] = useState("");
+  const [bundleMessage, setBundleMessage] = useState<string | null>(null);
   const hasPermission = (permission: (typeof permissions)[number]) =>
     user?.globalRole === "super_user" || permissions.includes(permission);
   const canUpdate = hasPermission("assets:update");
   const canDelete = hasPermission("assets:delete");
   const canPublish = hasPermission("assets:publish");
   const canComment = hasPermission("comments:create");
+  const canManageBundles = hasPermission("bundles:update");
 
   const load = async () => {
-    const [a, ch, pubs, timelineResult] = await Promise.all([
+    const [a, ch, pubs, timelineResult, bundleResult] = await Promise.all([
       client.getAsset(id),
       client.listChannels(),
       client.listPublications(id),
       client.listAssetTimeline(id),
+      canManageBundles
+        ? client.listBundles()
+        : Promise.resolve({ items: [] as BundleDTO[] }),
     ]);
     setAsset(a);
     setChannels(ch.items);
     setPublications(pubs.items);
     setTimeline(timelineResult.items);
+    setBundles(bundleResult.items);
     setTimelineError(null);
   };
 
@@ -134,6 +143,23 @@ export default function AssetDetailPage() {
     if (selected.length === 0 || !canPublish) return;
     await client.publish(id, selected);
     setTimeout(load, 600);
+  };
+
+  const addToBundle = async () => {
+    if (!canManageBundles || !selectedBundle) return;
+    try {
+      await client.addAssetToBundle(selectedBundle, id);
+      setBundleMessage("Added to bundle.");
+      setSelectedBundle("");
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      setBundleMessage(
+        status === 409
+          ? "This asset is already in that bundle."
+          : "Could not add to bundle.",
+      );
+    }
+    setTimeout(() => setBundleMessage(null), 2000);
   };
 
   const remove = async () => {
@@ -357,6 +383,46 @@ export default function AssetDetailPage() {
                 </ul>
               )}
             </div>
+
+            {canManageBundles && (
+              <div className="panel" style={{ marginTop: 20 }}>
+                <h3 className="section-title">Add to bundle</h3>
+                {bundles.length === 0 ? (
+                  <p className="dim" style={{ color: "var(--text-muted)" }}>
+                    No bundles yet.{" "}
+                    <Link href="/bundles">Create one</Link>.
+                  </p>
+                ) : (
+                  <>
+                    <select
+                      className="input"
+                      value={selectedBundle}
+                      onChange={(e) => setSelectedBundle(e.target.value)}
+                    >
+                      <option value="">Select a bundle…</option>
+                      {bundles.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.title}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className="btn block"
+                      onClick={addToBundle}
+                      disabled={!selectedBundle}
+                      style={{ marginTop: 8 }}
+                    >
+                      Add to bundle
+                    </button>
+                  </>
+                )}
+                {bundleMessage && (
+                  <p className="dim" style={{ marginTop: 8 }}>
+                    {bundleMessage}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

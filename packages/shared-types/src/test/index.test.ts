@@ -41,6 +41,7 @@ describe("shared-types constants", () => {
     expect(permissionsForAccountRole("account_viewer")).toEqual([
       "account:read",
       "assets:read",
+      "bundles:read",
       "comments:read",
     ]);
     expect(permissionsForAccountRole("account_owner")).toContain(
@@ -74,6 +75,20 @@ describe("shared-types constants", () => {
     expect(editor).toContain("assets:delete");
     expect(editor).toContain("assets:publish");
     expect(editor).toContain("comments:create");
+  });
+
+  it("lets account_editor manage bundles; viewer is read-only", () => {
+    const editor = permissionsForAccountRole("account_editor");
+    expect(editor).toContain("bundles:read");
+    expect(editor).toContain("bundles:create");
+    expect(editor).toContain("bundles:update");
+    expect(editor).toContain("bundles:delete");
+
+    const viewer = permissionsForAccountRole("account_viewer");
+    expect(viewer).toContain("bundles:read");
+    expect(viewer).not.toContain("bundles:create");
+    expect(viewer).not.toContain("bundles:update");
+    expect(viewer).not.toContain("bundles:delete");
   });
 
   it("differentiates the three roles", () => {
