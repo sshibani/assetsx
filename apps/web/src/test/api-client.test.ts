@@ -231,6 +231,41 @@ describe("ApiClient bundle methods", () => {
     expect(url).toBe("/api/bundles/b1/assets/a1");
     expect(init.method).toBe("DELETE");
   });
+
+  it("creates a share with POST", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ id: "s1", token: "tok", url: "http://x/shared/bundles/tok" }),
+      );
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    const share = await client.createBundleShare("b1");
+    expect(share.token).toBe("tok");
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/bundles/b1/share");
+    expect(init.method).toBe("POST");
+  });
+
+  it("revokes a share with DELETE", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(null, 204));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.revokeBundleShare("b1", "s1");
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/bundles/b1/share/s1");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("gets a public shared bundle by token (no auth required)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ title: "Public", items: [] }));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    const bundle = await client.getSharedBundle("tok");
+    expect(bundle.title).toBe("Public");
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/shared/bundles/tok");
+  });
 });
 
 describe("ApiClient authenticated requests", () => {

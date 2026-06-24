@@ -89,6 +89,16 @@ describe("shared-types constants", () => {
     expect(viewer).not.toContain("bundles:create");
     expect(viewer).not.toContain("bundles:update");
     expect(viewer).not.toContain("bundles:delete");
+    expect(viewer).not.toContain("bundles:share");
+  });
+
+  it("grants bundles:share to owner and editor only", () => {
+    expect(permissionsForAccountRole("account_owner")).toContain(
+      "bundles:share",
+    );
+    expect(permissionsForAccountRole("account_editor")).toContain(
+      "bundles:share",
+    );
   });
 
   it("differentiates the three roles", () => {

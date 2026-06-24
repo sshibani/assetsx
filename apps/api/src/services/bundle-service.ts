@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from "node:crypto";
 import type { PrismaClient, Bundle, BundleAsset, Asset, Rendition } from "@prisma/client";
 import type { StorageProvider } from "@assetx/storage";
 import type {
@@ -5,10 +6,16 @@ import type {
   BundleAssetDTO,
   BundleDTO,
   BundleDetailDTO,
+  BundleShareCreatedDTO,
+  PublicBundleDTO,
   RenditionName,
 } from "@assetx/shared-types";
 import type { AuthUser } from "../authorization.js";
 import { hasPermission, isSuperUser } from "../authorization.js";
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 export class BundleError extends Error {
   constructor(
@@ -34,6 +41,10 @@ export interface AddAssetInput {
   position?: number;
 }
 
+export interface CreateShareInput {
+  expiresInDays?: number;
+}
+
 type AssetWithRenditions = Asset & { renditions: Rendition[] };
 type BundleItem = BundleAsset & { asset: AssetWithRenditions };
 
@@ -41,6 +52,7 @@ export class BundleService {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly storage: StorageProvider,
+    private readonly shareBaseUrl = "http://localhost:3000",
   ) {}
 
   async list(user: AuthUser): Promise<BundleDTO[]> {
@@ -176,6 +188,90 @@ export class BundleService {
     await this.prisma.bundleAsset.delete({
       where: { bundleId_assetId: { bundleId: id, assetId } },
     });
+  }
+
+  async createShare(
+    id: string,
+    user: AuthUser,
+    input: CreateShareInput = {},
+  ): Promise<BundleShareCreatedDTO> {
+    await this.loadAccessible(id, user, "bundles:share");
+
+    const token = randomBytes(32).toString("base64url");
+    const expiresAt =
+      input.expiresInDays !== undefined
+        ? new Date(Date.now() + input.expiresInDays * 24 * 60 * 60 * 1000)
+        : null;
+
+    const share = await this.prisma.bundleShare.create({
+      data: {
+        bundleId: id,
+        tokenHash: sha256(token),
+        createdById: user.id,
+        expiresAt,
+      },
+    });
+
+    return {
+      id: share.id,
+      bundleId: share.bundleId,
+      createdById: share.createdById,
+      expiresAt: share.expiresAt?.toISOString() ?? null,
+      revokedAt: share.revokedAt?.toISOString() ?? null,
+      createdAt: share.createdAt.toISOString(),
+      token,
+      url: `${this.shareBaseUrl}/shared/bundles/${token}`,
+    };
+  }
+
+  async revokeShare(
+    id: string,
+    user: AuthUser,
+    shareId: string,
+  ): Promise<void> {
+    await this.loadAccessible(id, user, "bundles:share");
+    const share = await this.prisma.bundleShare.findUnique({
+      where: { id: shareId },
+    });
+    if (!share || share.bundleId !== id) {
+      throw new BundleError("Share not found", 404);
+    }
+    if (share.revokedAt) return;
+    await this.prisma.bundleShare.update({
+      where: { id: shareId },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /** Resolve a public share by its raw token. No authentication. */
+  async getPublicByToken(token: string): Promise<PublicBundleDTO> {
+    const share = await this.prisma.bundleShare.findUnique({
+      where: { tokenHash: sha256(token) },
+    });
+    if (
+      !share ||
+      share.revokedAt !== null ||
+      (share.expiresAt !== null && share.expiresAt.getTime() < Date.now())
+    ) {
+      throw new BundleError("Share not found", 404);
+    }
+
+    const bundle = await this.prisma.bundle.findUnique({
+      where: { id: share.bundleId },
+    });
+    if (!bundle) throw new BundleError("Share not found", 404);
+
+    const items = await this.prisma.bundleAsset.findMany({
+      where: { bundleId: bundle.id },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }],
+      include: { asset: { include: { renditions: true } } },
+    });
+
+    return {
+      title: bundle.title,
+      description: bundle.description,
+      items: items.map((item) => this.itemToDTO(item)),
+    };
   }
 
   private async loadAccessible(

@@ -30,6 +30,7 @@ const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS "Publication" ("id" TEXT NOT NULL PRIMARY KEY,"assetId" TEXT NOT NULL,"channelId" TEXT NOT NULL,"status" TEXT NOT NULL,"reference" TEXT,"error" TEXT,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "Publication_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS "Bundle" ("id" TEXT NOT NULL PRIMARY KEY,"accountId" TEXT NOT NULL,"ownerId" TEXT NOT NULL,"title" TEXT NOT NULL,"description" TEXT,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL,CONSTRAINT "Bundle_accountId_fkey" FOREIGN KEY ("accountId") REFERENCES "Account" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "Bundle_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS "BundleAsset" ("id" TEXT NOT NULL PRIMARY KEY,"bundleId" TEXT NOT NULL,"assetId" TEXT NOT NULL,"position" INTEGER NOT NULL DEFAULT 0,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "BundleAsset_bundleId_fkey" FOREIGN KEY ("bundleId") REFERENCES "Bundle" ("id") ON DELETE CASCADE ON UPDATE CASCADE,CONSTRAINT "BundleAsset_assetId_fkey" FOREIGN KEY ("assetId") REFERENCES "Asset" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS "BundleShare" ("id" TEXT NOT NULL PRIMARY KEY,"bundleId" TEXT NOT NULL,"tokenHash" TEXT NOT NULL,"createdById" TEXT NOT NULL,"expiresAt" DATETIME,"revokedAt" DATETIME,"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,CONSTRAINT "BundleShare_bundleId_fkey" FOREIGN KEY ("bundleId") REFERENCES "Bundle" ("id") ON DELETE CASCADE ON UPDATE CASCADE)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"("email")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "Account_slug_key" ON "Account"("slug")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "AccountSettings_accountId_key" ON "AccountSettings"("accountId")`,
@@ -61,6 +62,8 @@ const schemaStatements = [
   `CREATE INDEX IF NOT EXISTS "BundleAsset_bundleId_idx" ON "BundleAsset"("bundleId")`,
   `CREATE INDEX IF NOT EXISTS "BundleAsset_assetId_idx" ON "BundleAsset"("assetId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "BundleAsset_bundleId_assetId_key" ON "BundleAsset"("bundleId", "assetId")`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "BundleShare_tokenHash_key" ON "BundleShare"("tokenHash")`,
+  `CREATE INDEX IF NOT EXISTS "BundleShare_bundleId_idx" ON "BundleShare"("bundleId")`,
 ];
 
 async function applySchema(prisma: PrismaClient): Promise<void> {

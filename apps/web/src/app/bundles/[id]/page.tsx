@@ -20,6 +20,10 @@ export default function BundleDetailPage() {
 
   const canUpdate = hasPermission("bundles:update");
   const canDelete = hasPermission("bundles:delete");
+  const canShare = hasPermission("bundles:share");
+
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const load = async () => {
     const [b, allAssets] = await Promise.all([
@@ -75,6 +79,24 @@ export default function BundleDetailPage() {
     if (!confirm("Remove this asset from the bundle?")) return;
     await client.removeAssetFromBundle(id, assetId);
     await load();
+  };
+
+  const createShare = async () => {
+    if (!canShare) return;
+    const share = await client.createBundleShare(id);
+    setShareUrl(share.url);
+    setShareCopied(false);
+  };
+
+  const copyShare = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 1500);
+    } catch {
+      // clipboard may be unavailable; the URL is shown for manual copy
+    }
   };
 
   const remove = async () => {
@@ -228,6 +250,41 @@ export default function BundleDetailPage() {
                   <p className="dim" style={{ color: "var(--danger)" }}>
                     {error}
                   </p>
+                )}
+              </div>
+            )}
+
+            {canShare && (
+              <div className="panel" style={{ marginTop: 20 }}>
+                <h3 className="section-title">Share</h3>
+                <p className="dim" style={{ color: "var(--text-muted)" }}>
+                  Generate a read-only link that anyone can open without signing
+                  in.
+                </p>
+                <button
+                  className="btn block"
+                  onClick={createShare}
+                  style={{ marginTop: 8 }}
+                >
+                  Create share link
+                </button>
+                {shareUrl && (
+                  <div className="field" style={{ marginTop: 12 }}>
+                    <label className="label">Share link</label>
+                    <input
+                      className="input"
+                      readOnly
+                      value={shareUrl}
+                      onFocus={(e) => e.target.select()}
+                    />
+                    <button
+                      className="btn secondary block"
+                      onClick={copyShare}
+                      style={{ marginTop: 8 }}
+                    >
+                      {shareCopied ? "Copied!" : "Copy link"}
+                    </button>
+                  </div>
                 )}
               </div>
             )}

@@ -21,6 +21,7 @@ represents and how it is used.
 | [AssetActivity](./AssetActivity.md) | An append-only activity log entry for an asset. |
 | [Bundle](./Bundle.md) | An account-scoped, named collection that groups assets. |
 | [BundleAsset](./BundleAsset.md) | The join record linking an asset to a bundle (with ordering). |
+| [BundleShare](./BundleShare.md) | A revocable, optionally-expiring read-only share link for a bundle. |
 
 ## Roles
 
@@ -63,6 +64,8 @@ represents and how it is used.
 | [BundleDTO](./BundleDTO.md) | Public representation of a bundle (with asset count). |
 | [BundleDetailDTO](./BundleDetailDTO.md) | A bundle with its full, ordered asset list. |
 | [BundleAssetDTO](./BundleAssetDTO.md) | A bundle entry: position + hydrated asset. |
+| [BundleShareCreatedDTO](./BundleShareCreatedDTO.md) | One-time share-creation response (raw token + url). |
+| [PublicBundleDTO](./PublicBundleDTO.md) | Read-only, unauthenticated view of a shared bundle. |
 | [RenditionDTO](./RenditionDTO.md) | Public representation of a rendition. |
 | [PublicationDTO](./PublicationDTO.md) | Public representation of a publication. |
 | [AssetCommentDTO](./AssetCommentDTO.md) | Public representation of a comment. |

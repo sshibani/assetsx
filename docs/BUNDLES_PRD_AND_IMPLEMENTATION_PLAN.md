@@ -16,10 +16,9 @@ The feature is account-scoped for the current multi-tenant model: a bundle and
 the assets it references belong to the same account, and access follows the same
 account-membership and permission rules used elsewhere.
 
-> **Phasing.** This document covers **Phase 1** (the Bundle entity, asset
-> add/remove, CRUD API, permissions, and web UI). **Phase 2** — shareable,
-> revocable links for read-only external access — is tracked separately and is
-> intentionally out of scope here.
+> **Phasing.** **Phase 1** (the Bundle entity, asset add/remove, CRUD API,
+> permissions, and web UI) and **Phase 2** (shareable, revocable links for
+> read-only external access) are both implemented and documented below.
 
 ## Product Goals
 
@@ -33,10 +32,10 @@ account-membership and permission rules used elsewhere.
 
 ## Non-Goals
 
-- No shareable links in Phase 1 (Phase 2).
 - No editing of assets through a bundle (bundles only reference assets).
 - No nested bundles.
-- No per-asset permissions within a bundle.
+- No per-asset permissions within a bundle (a share grants access to the whole
+  bundle).
 - Does not replace the existing publishing/channel mechanism.
 
 ## User Stories
@@ -57,14 +56,15 @@ Bundle-specific permissions were added to the shared permission model:
 - `bundles:create`
 - `bundles:update`
 - `bundles:delete`
+- `bundles:share` (Phase 2)
 
 Role mapping:
 
-| Role | read | create | update | delete |
-| --- | --- | --- | --- | --- |
-| `account_owner` | Yes | Yes | Yes | Yes |
-| `account_editor` | Yes | Yes | Yes | Yes |
-| `account_viewer` | Yes | No | No | No |
+| Role | read | create | update | delete | share |
+| --- | --- | --- | --- | --- | --- |
+| `account_owner` | Yes | Yes | Yes | Yes | Yes |
+| `account_editor` | Yes | Yes | Yes | Yes | Yes |
+| `account_viewer` | Yes | No | No | No | No |
 
 Authorization lives in the service layer (`load → assert account + permission →
 act → toDTO`), matching `AssetService`. Cross-account access is denied unless the
@@ -85,9 +85,17 @@ See [BundleAsset](./glossary/BundleAsset.md). `id`, `bundleId`, `assetId`,
 `position`, `createdAt`. `@@unique([bundleId, assetId])`; indexed on `bundleId`
 and `assetId`; cascade deletes from both `Bundle` and `Asset`.
 
-Schema changes were synced across the four required locations: `schema.prisma`,
-`prisma db push` (via `prisma generate`), the raw-SQL `schemaStatements` in
-`apps/api/src/test/test-helpers.ts`, and (not needed) seed/backfill.
+### BundleShare (Phase 2)
+
+See [BundleShare](./glossary/BundleShare.md). `id`, `bundleId`, `tokenHash`
+(unique, SHA-256 of the raw token — the token itself is never stored),
+`createdById`, `expiresAt?`, `revokedAt?`, `createdAt`. Indexed on `bundleId`;
+cascade-deletes with its `Bundle`. Modeled on
+[RefreshToken](./glossary/RefreshToken.md).
+
+Schema changes were synced across the required locations: `schema.prisma`,
+`prisma db push` (via `prisma generate`), and the raw-SQL `schemaStatements` in
+`apps/api/src/test/test-helpers.ts`.
 
 ## API
 
@@ -110,6 +118,25 @@ DTOs: [BundleDTO](./glossary/BundleDTO.md),
 [BundleDetailDTO](./glossary/BundleDetailDTO.md),
 [BundleAssetDTO](./glossary/BundleAssetDTO.md).
 
+### Sharing (Phase 2)
+
+| Method | Path | Auth | Description | Codes |
+|---|---|---|---|---|
+| `POST` | `/api/bundles/:id/share` | `bundles:share` | Create a share; returns a one-time token + URL | 201 / 400 / 403 / 404 |
+| `DELETE` | `/api/bundles/:id/share/:shareId` | `bundles:share` | Revoke a share | 204 / 403 / 404 |
+| `GET` | `/api/shared/bundles/:token` | **public** | Resolve a shared bundle (read-only) | 200 / 404 |
+
+The public route uses **no** `authGuard`. Unknown, revoked, or expired tokens all
+return 404 so existence is never leaked. The raw token (32 random bytes,
+base64url) is returned only at creation; only its SHA-256 hash is stored. The
+share URL base is configurable via `APP_BASE_URL` (default
+`http://localhost:3000`) and points at the web app's `/shared/bundles/:token`
+page.
+
+DTOs: [BundleShareCreatedDTO](./glossary/BundleShareCreatedDTO.md) (one-time
+creation response), [PublicBundleDTO](./glossary/PublicBundleDTO.md) (public
+read view).
+
 ## Web
 
 Built with the existing all-client, no-extra-deps conventions (client
@@ -118,7 +145,8 @@ auth-guard, and global CSS classes).
 
 - **API client** (`apps/web/src/lib/api-client.ts`): `listBundles`, `getBundle`,
   `createBundle`, `updateBundle`, `deleteBundle`, `addAssetToBundle`,
-  `removeAssetFromBundle`.
+  `removeAssetFromBundle`, plus (Phase 2) `createBundleShare`,
+  `revokeBundleShare`, `getSharedBundle`.
 - **Bundles list** (`/bundles`): lists the account's bundles, with an inline
   "Create a bundle" form gated by `bundles:create`. A `Bundles` link was added to
   the gallery appbar, gated by `bundles:read`.
@@ -129,12 +157,18 @@ auth-guard, and global CSS classes).
 - **Asset detail** (`/assets/[id]`): an "Add to bundle" panel (gated by
   `bundles:update`) that adds the current asset to a chosen bundle, surfacing the
   409 "already in bundle" case gracefully.
+- **Share** (Phase 2): a "Share" panel on the bundle detail page (gated by
+  `bundles:share`) creates a link and offers copy-to-clipboard. A public
+  `/shared/bundles/[token]` page renders the bundle read-only without sign-in.
 
 ## Testing
 
 - API: `apps/api/src/test/bundles.test.ts` (integration, Vitest) covers
   create/list/get/update/delete, add/remove asset, duplicate add (409),
-  cross-account isolation (403), viewer-cannot-create (403), and rejecting an
-  asset from another account (404). Built test-first (RED → GREEN).
-- Web: `apps/web/src/test/api-client.test.ts` covers all new client methods
-  (URL/method/body via a mock `fetchFn`).
+  cross-account isolation (403), viewer-cannot-create (403), rejecting an asset
+  from another account (404), and (Phase 2) share create/revoke, viewer/cross-
+  account forbidden (403), public read by token, and unknown/revoked/expired
+  tokens (404). Built test-first (RED → GREEN).
+- Web: `apps/web/src/test/api-client.test.ts` covers all new client methods,
+  including the share/revoke/public-read methods (URL/method/body via a mock
+  `fetchFn`).

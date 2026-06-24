@@ -13,6 +13,8 @@ export type {
   BundleDTO,
   BundleAssetDTO,
   BundleDetailDTO,
+  BundleShareCreatedDTO,
+  PublicBundleDTO,
   DateTimeFormat,
   GlobalRole,
   Permission,

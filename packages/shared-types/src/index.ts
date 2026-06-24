@@ -42,6 +42,7 @@ export const PERMISSIONS = [
   "bundles:create",
   "bundles:update",
   "bundles:delete",
+  "bundles:share",
   "comments:read",
   "comments:create",
   "platform:manage",
@@ -65,6 +66,7 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "bundles:create",
     "bundles:update",
     "bundles:delete",
+    "bundles:share",
     "comments:read",
     "comments:create",
   ],
@@ -79,6 +81,7 @@ export const ACCOUNT_ROLE_PERMISSIONS: Record<AccountRole, Permission[]> = {
     "bundles:create",
     "bundles:update",
     "bundles:delete",
+    "bundles:share",
     "comments:read",
     "comments:create",
   ],
@@ -165,6 +168,32 @@ export interface BundleAssetDTO {
 }
 
 export interface BundleDetailDTO extends BundleDTO {
+  items: BundleAssetDTO[];
+}
+
+export interface BundleShareDTO {
+  id: string;
+  bundleId: string;
+  createdById: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+/**
+ * Returned only once, when a share is created. Includes the raw token and the
+ * shareable URL; the token itself is never persisted (only its hash is stored)
+ * and cannot be retrieved again.
+ */
+export interface BundleShareCreatedDTO extends BundleShareDTO {
+  token: string;
+  url: string;
+}
+
+/** Read-only, unauthenticated view of a shared bundle resolved by token. */
+export interface PublicBundleDTO {
+  title: string;
+  description: string | null;
   items: BundleAssetDTO[];
 }
 

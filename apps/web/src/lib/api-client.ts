@@ -12,6 +12,8 @@ import type {
   AuthTokens,
   BundleDTO,
   BundleDetailDTO,
+  BundleShareCreatedDTO,
+  PublicBundleDTO,
   ChannelInfoLike,
   DateTimeFormat,
   GlobalRole,
@@ -333,6 +335,27 @@ export class ApiClient {
     await this.request<void>(`/api/bundles/${bundleId}/assets/${assetId}`, {
       method: "DELETE",
     });
+  }
+
+  async createBundleShare(
+    bundleId: string,
+    data: { expiresInDays?: number } = {},
+  ): Promise<BundleShareCreatedDTO> {
+    return this.request<BundleShareCreatedDTO>(
+      `/api/bundles/${bundleId}/share`,
+      { method: "POST", body: data },
+    );
+  }
+
+  async revokeBundleShare(bundleId: string, shareId: string): Promise<void> {
+    await this.request<void>(`/api/bundles/${bundleId}/share/${shareId}`, {
+      method: "DELETE",
+    });
+  }
+
+  /** Public, unauthenticated read of a shared bundle by token. */
+  async getSharedBundle(token: string): Promise<PublicBundleDTO> {
+    return this.request<PublicBundleDTO>(`/api/shared/bundles/${token}`);
   }
 
   // --- Publishing ---

@@ -316,3 +316,173 @@ describe("DELETE /api/bundles/:id/assets/:assetId", () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+describe("POST /api/bundles/:id/share", () => {
+  it("creates a share and returns a one-time token + url", async () => {
+    const created = (await createBundle(token, { title: "Shared" })).json();
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/bundles/${created.id}/share`,
+      headers: authHeaders(token),
+      payload: {},
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(typeof body.token).toBe("string");
+    expect(body.token.length).toBeGreaterThan(20);
+    expect(body.url).toContain(body.token);
+    expect(body.bundleId).toBe(created.id);
+    expect(body.revokedAt).toBeNull();
+
+    // only the hash is stored, never the raw token
+    const stored = await ctx.prisma.bundleShare.findUnique({
+      where: { id: body.id },
+    });
+    expect(stored).not.toBeNull();
+    expect(stored!.tokenHash).not.toBe(body.token);
+  });
+
+  it("forbids users without bundles:share (viewer)", async () => {
+    const created = (await createBundle(token, { title: "NoShare" })).json();
+    const viewer = await createUserWithToken(ctx, {
+      accountRole: "account_viewer",
+      accountId,
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/bundles/${created.id}/share`,
+      headers: authHeaders(viewer.accessToken),
+      payload: {},
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("forbids cross-account sharing", async () => {
+    const created = (await createBundle(token, { title: "Mine" })).json();
+    const other = await createUserWithToken(ctx, {
+      email: "outsider@assetx.local",
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/bundles/${created.id}/share`,
+      headers: authHeaders(other.accessToken),
+      payload: {},
+    });
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+describe("DELETE /api/bundles/:id/share/:shareId", () => {
+  it("revokes a share", async () => {
+    const created = (await createBundle(token, { title: "Revoke" })).json();
+    const share = (
+      await app.inject({
+        method: "POST",
+        url: `/api/bundles/${created.id}/share`,
+        headers: authHeaders(token),
+        payload: {},
+      })
+    ).json();
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/api/bundles/${created.id}/share/${share.id}`,
+      headers: authHeaders(token),
+    });
+    expect(res.statusCode).toBe(204);
+    const stored = await ctx.prisma.bundleShare.findUnique({
+      where: { id: share.id },
+    });
+    expect(stored!.revokedAt).not.toBeNull();
+  });
+});
+
+describe("GET /api/shared/bundles/:token (public)", () => {
+  it("returns the bundle read-only without authentication", async () => {
+    const created = (await createBundle(token, { title: "Public" })).json();
+    const asset = await seedAsset(userId, accountId, {
+      originalName: "shared.png",
+    });
+    await app.inject({
+      method: "POST",
+      url: `/api/bundles/${created.id}/assets`,
+      headers: authHeaders(token),
+      payload: { assetId: asset.id },
+    });
+    const share = (
+      await app.inject({
+        method: "POST",
+        url: `/api/bundles/${created.id}/share`,
+        headers: authHeaders(token),
+        payload: {},
+      })
+    ).json();
+
+    // no auth header
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/shared/bundles/${share.token}`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.title).toBe("Public");
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0].asset.originalName).toBe("shared.png");
+    // must not leak internal ids
+    expect(body.accountId).toBeUndefined();
+  });
+
+  it("returns 404 for an unknown token", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/shared/bundles/nonexistent-token",
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 404 for a revoked token", async () => {
+    const created = (await createBundle(token, { title: "Revoked" })).json();
+    const share = (
+      await app.inject({
+        method: "POST",
+        url: `/api/bundles/${created.id}/share`,
+        headers: authHeaders(token),
+        payload: {},
+      })
+    ).json();
+    await app.inject({
+      method: "DELETE",
+      url: `/api/bundles/${created.id}/share/${share.id}`,
+      headers: authHeaders(token),
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/shared/bundles/${share.token}`,
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 404 for an expired token", async () => {
+    const created = (await createBundle(token, { title: "Expired" })).json();
+    const share = (
+      await app.inject({
+        method: "POST",
+        url: `/api/bundles/${created.id}/share`,
+        headers: authHeaders(token),
+        payload: { expiresInDays: 7 },
+      })
+    ).json();
+    // force expiry in the past
+    await ctx.prisma.bundleShare.update({
+      where: { id: share.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/shared/bundles/${share.token}`,
+    });
+    expect(res.statusCode).toBe(404);
+  });
+});

@@ -200,6 +200,7 @@ model Bundle {
   account     Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
   owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   items       BundleAsset[]
+  shares      BundleShare[]
 
   @@index([accountId])
   @@index([accountId, createdAt])
@@ -218,4 +219,17 @@ model BundleAsset {
   @@unique([bundleId, assetId])
   @@index([bundleId])
   @@index([assetId])
+}
+
+model BundleShare {
+  id          String    @id @default(uuid())
+  bundleId    String
+  tokenHash   String    @unique
+  createdById String
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  bundle      Bundle    @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@index([bundleId])
 }
