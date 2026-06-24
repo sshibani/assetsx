@@ -69,13 +69,13 @@ export default function SharedBundlePage() {
           </div>
         ) : (
           <div className="grid">
-            {bundle.items.map((item) => {
+            {bundle.items.map((item, index) => {
               const asset = item.asset;
               const thumb = asset.renditions.find((r) => r.name === "thumb");
               const standard =
                 asset.renditions.find((r) => r.name === "standard") ?? thumb;
               return (
-                <div key={item.assetId} className="card">
+                <div key={index} className="card">
                   {standard ? (
                     <img
                       className="thumb"

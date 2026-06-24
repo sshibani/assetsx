@@ -166,7 +166,7 @@ describe("GET /api/bundles/:id", () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it("forbids cross-account access", async () => {
+  it("hides another account's bundle as 404 (no existence leak)", async () => {
     const created = (await createBundle(token, { title: "Mine" })).json();
     const other = await createUserWithToken(ctx, {
       email: "intruder@assetx.local",
@@ -176,7 +176,7 @@ describe("GET /api/bundles/:id", () => {
       url: `/api/bundles/${created.id}`,
       headers: authHeaders(other.accessToken),
     });
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(404);
   });
 });
 
@@ -411,7 +411,7 @@ describe("POST /api/bundles/:id/share", () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it("forbids cross-account sharing", async () => {
+  it("hides another account's bundle from sharing as 404", async () => {
     const created = (await createBundle(token, { title: "Mine" })).json();
     const other = await createUserWithToken(ctx, {
       email: "outsider@assetx.local",
@@ -422,7 +422,7 @@ describe("POST /api/bundles/:id/share", () => {
       headers: authHeaders(other.accessToken),
       payload: {},
     });
-    expect(res.statusCode).toBe(403);
+    expect(res.statusCode).toBe(404);
   });
 });
 
@@ -481,9 +481,18 @@ describe("GET /api/shared/bundles/:token (public)", () => {
     const body = res.json();
     expect(body.title).toBe("Public");
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].asset.originalName).toBe("shared.png");
-    // must not leak internal ids
+    const publicAsset = body.items[0].asset;
+    expect(publicAsset.originalName).toBe("shared.png");
+    // must not leak internal ids / sensitive fields to anonymous recipients
     expect(body.accountId).toBeUndefined();
+    expect(body.id).toBeUndefined();
+    expect(publicAsset.id).toBeUndefined();
+    expect(publicAsset.accountId).toBeUndefined();
+    expect(publicAsset.ownerId).toBeUndefined();
+    expect(publicAsset.checksum).toBeUndefined();
+    expect(publicAsset.originalUrl).toBeUndefined();
+    expect(publicAsset.metadataSource).toBeUndefined();
+    expect(publicAsset.status).toBeUndefined();
   });
 
   it("returns 404 for an unknown token", async () => {

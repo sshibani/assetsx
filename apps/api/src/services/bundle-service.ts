@@ -1,17 +1,21 @@
 import { createHash, randomBytes } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import type { PrismaClient, Bundle, BundleAsset, Asset, Rendition } from "@prisma/client";
 import type { StorageProvider } from "@assetx/storage";
 import type {
-  AssetDTO,
   BundleAssetDTO,
   BundleDTO,
   BundleDetailDTO,
   BundleShareCreatedDTO,
+  PublicBundleAssetDTO,
   PublicBundleDTO,
-  RenditionName,
 } from "@assetx/shared-types";
 import type { AuthUser } from "../authorization.js";
 import { hasPermission, isSuperUser } from "../authorization.js";
+import { assetToDTO, publicAssetToDTO } from "../mappers/asset-mapper.js";
+
+/** Defensive cap on the number of items returned by the public share view. */
+const PUBLIC_BUNDLE_ITEM_LIMIT = 500;
 
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -177,20 +181,26 @@ export class BundleService {
       throw new BundleError("Asset not found", 404);
     }
 
-    const existing = await this.prisma.bundleAsset.findUnique({
-      where: { bundleId_assetId: { bundleId: id, assetId: input.assetId } },
-    });
-    if (existing) {
-      throw new BundleError("Asset is already in this bundle", 409);
+    try {
+      await this.prisma.bundleAsset.create({
+        data: {
+          bundleId: id,
+          assetId: input.assetId,
+          position: input.position ?? 0,
+        },
+      });
+    } catch (err) {
+      // Unique constraint (bundleId, assetId): the asset is already in the
+      // bundle. Handles the concurrent-add race that a prior existence check
+      // would miss.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new BundleError("Asset is already in this bundle", 409);
+      }
+      throw err;
     }
-
-    await this.prisma.bundleAsset.create({
-      data: {
-        bundleId: id,
-        assetId: input.assetId,
-        position: input.position ?? 0,
-      },
-    });
 
     const count = await this.prisma.bundleAsset.count({
       where: { bundleId: id },
@@ -290,12 +300,13 @@ export class BundleService {
       where: { bundleId: bundle.id },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }],
       include: { asset: { include: { renditions: true } } },
+      take: PUBLIC_BUNDLE_ITEM_LIMIT,
     });
 
     return {
       title: bundle.title,
       description: bundle.description,
-      items: items.map((item) => this.itemToDTO(item)),
+      items: items.map((item) => this.publicItemToDTO(item)),
     };
   }
 
@@ -309,8 +320,10 @@ export class BundleService {
     if (!hasPermission(user, permission)) {
       throw new BundleError("Forbidden", 403);
     }
+    // Treat a bundle in another account as not found to avoid leaking its
+    // existence (consistent with addAsset's foreign-asset handling).
     if (!isSuperUser(user) && bundle.accountId !== user.accountId) {
-      throw new BundleError("Forbidden", 403);
+      throw new BundleError("Bundle not found", 404);
     }
     return bundle;
   }
@@ -339,38 +352,14 @@ export class BundleService {
     return {
       assetId: item.assetId,
       position: item.position,
-      asset: this.assetToDTO(item.asset),
+      asset: assetToDTO(item.asset, item.asset.renditions, this.storage),
     };
   }
 
-  private assetToDTO(asset: AssetWithRenditions): AssetDTO {
+  private publicItemToDTO(item: BundleItem): PublicBundleAssetDTO {
     return {
-      id: asset.id,
-      accountId: asset.accountId,
-      ownerId: asset.ownerId,
-      originalName: asset.originalName,
-      status: asset.status as AssetDTO["status"],
-      checksum: asset.checksum,
-      width: asset.width,
-      height: asset.height,
-      format: asset.format,
-      sizeBytes: asset.sizeBytes,
-      title: asset.title,
-      description: asset.description,
-      metadataSource: asset.metadataSource as AssetDTO["metadataSource"],
-      renditions: asset.renditions.map((r) => ({
-        id: r.id,
-        name: r.name as RenditionName,
-        width: r.width,
-        height: r.height,
-        format: r.format,
-        sizeBytes: r.sizeBytes,
-        url: this.storage.getUrl(r.storageKey),
-      })),
-      originalUrl: this.storage.getUrl(`assets/${asset.id}/original`),
-      expiresAt: asset.expiresAt?.toISOString() ?? null,
-      createdAt: asset.createdAt.toISOString(),
-      updatedAt: asset.updatedAt.toISOString(),
+      position: item.position,
+      asset: publicAssetToDTO(item.asset, item.asset.renditions, this.storage),
     };
   }
 }

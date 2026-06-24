@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/client-context";
+import { isPublicRoute } from "../lib/routes";
 
 interface NavItem {
   href: string;
@@ -33,17 +34,11 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-/** Routes that must never show the app chrome (public / unauthenticated). */
-const PUBLIC_PREFIXES = ["/login", "/signup", "/shared"];
-
 export function SideNav() {
   const pathname = usePathname() ?? "/";
   const { isAuthenticated, logout } = useAuth();
 
-  const isPublic = PUBLIC_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
-  if (isPublic || !isAuthenticated) return null;
+  if (isPublicRoute(pathname) || !isAuthenticated) return null;
 
   return (
     <aside className="sidenav" aria-label="Primary">

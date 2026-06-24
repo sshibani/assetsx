@@ -190,11 +190,38 @@ export interface BundleShareCreatedDTO extends BundleShareDTO {
   url: string;
 }
 
+/** A single viewable rendition exposed to unauthenticated share recipients. */
+export interface PublicRenditionDTO {
+  name: RenditionName;
+  width: number;
+  height: number;
+  url: string;
+}
+
+/**
+ * Minimal, non-sensitive asset shape for unauthenticated share recipients.
+ * Deliberately omits internal identifiers (id/accountId/ownerId), the checksum,
+ * status/metadata provenance, and the original full-resolution download URL.
+ */
+export interface PublicAssetDTO {
+  title: string | null;
+  originalName: string;
+  format: string;
+  width: number | null;
+  height: number | null;
+  renditions: PublicRenditionDTO[];
+}
+
+export interface PublicBundleAssetDTO {
+  position: number;
+  asset: PublicAssetDTO;
+}
+
 /** Read-only, unauthenticated view of a shared bundle resolved by token. */
 export interface PublicBundleDTO {
   title: string;
   description: string | null;
-  items: BundleAssetDTO[];
+  items: PublicBundleAssetDTO[];
 }
 
 export interface AssetCommentDTO {
