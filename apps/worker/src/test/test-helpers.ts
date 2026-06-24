@@ -11,7 +11,7 @@ import {
   LocalPublicChannel,
   WebhookChannel,
 } from "@assetx/publishing";
-import type { WorkerDependencies } from "./dependencies.js";
+import type { WorkerDependencies } from "../dependencies.js";
 
 const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS "User" ("id" TEXT NOT NULL PRIMARY KEY,"email" TEXT NOT NULL,"passwordHash" TEXT,"globalRole" TEXT NOT NULL DEFAULT 'user',"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL)`,

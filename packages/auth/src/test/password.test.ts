@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hashPassword, verifyPassword } from "./password.js";
+import { hashPassword, verifyPassword } from "../password.js";
 
 describe("password hashing", () => {
   it("produces an argon2 hash distinct from the plaintext", async () => {

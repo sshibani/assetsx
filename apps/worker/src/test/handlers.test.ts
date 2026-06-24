@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
-import { processAsset } from "./process-asset.js";
-import { publishAsset } from "./publish-asset.js";
+import { processAsset } from "../process-asset.js";
+import { publishAsset } from "../publish-asset.js";
 import {
   createWorkerTestContext,
   makeTestImage,

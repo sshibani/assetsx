@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { ApiClient } from "./api-client.js";
+import { ApiClient } from "../lib/api-client.js";
 
 function jsonResponse(body: unknown, status = 200) {
   return {

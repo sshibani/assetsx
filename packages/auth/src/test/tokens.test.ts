@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TokenService } from "./tokens.js";
+import { TokenService } from "../tokens.js";
 
 const service = new TokenService({
   accessSecret: "access-secret-test",

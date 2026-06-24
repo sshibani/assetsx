@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DiskStorageProvider } from "./disk-storage-provider.js";
-import { runStorageProviderContract } from "./contract.js";
+import { DiskStorageProvider } from "../disk-storage-provider.js";
+import { runStorageProviderContract } from "../contract.js";
 
 let root: string;
 

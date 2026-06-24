@@ -6,7 +6,7 @@ import {
   createUserWithToken,
   makeTestImage,
   type TestContext,
-} from "../test-helpers.js";
+} from "./test-helpers.js";
 
 let ctx: TestContext;
 let app: FastifyInstance;

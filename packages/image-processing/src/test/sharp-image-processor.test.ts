@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import sharp from "sharp";
-import { SharpImageProcessor } from "./sharp-image-processor.js";
-import { DEFAULT_RENDITIONS } from "./types.js";
+import { SharpImageProcessor } from "../sharp-image-processor.js";
+import { DEFAULT_RENDITIONS } from "../types.js";
 
 let landscape: Buffer; // 3000x2000
 let small: Buffer; //    100x100
