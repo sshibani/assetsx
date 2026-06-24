@@ -40,6 +40,9 @@ async function createTables(): Promise<void> {
   await prisma.$executeRawUnsafe(
     `CREATE TABLE IF NOT EXISTS "AccountMembership" ("id" TEXT NOT NULL PRIMARY KEY,"accountId" TEXT NOT NULL,"userId" TEXT NOT NULL,"role" TEXT NOT NULL,"status" TEXT NOT NULL DEFAULT 'active',"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
   );
+  await prisma.$executeRawUnsafe(
+    `CREATE TABLE IF NOT EXISTS "AccountSettings" ("id" TEXT NOT NULL PRIMARY KEY,"accountId" TEXT NOT NULL,"dateTimeFormat" TEXT NOT NULL DEFAULT 'ISO',"timezone" TEXT NOT NULL DEFAULT 'UTC',"createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`,
+  );
 }
 
 async function createIndexes(): Promise<void> {
@@ -50,6 +53,7 @@ async function createIndexes(): Promise<void> {
     `CREATE UNIQUE INDEX IF NOT EXISTS "AccountMembership_accountId_userId_key" ON "AccountMembership"("accountId", "userId")`,
     `CREATE INDEX IF NOT EXISTS "AccountMembership_userId_idx" ON "AccountMembership"("userId")`,
     `CREATE INDEX IF NOT EXISTS "AccountMembership_accountId_idx" ON "AccountMembership"("accountId")`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS "AccountSettings_accountId_key" ON "AccountSettings"("accountId")`,
     `CREATE INDEX IF NOT EXISTS "RefreshToken_accountId_idx" ON "RefreshToken"("accountId")`,
     `CREATE INDEX IF NOT EXISTS "RefreshToken_sessionId_idx" ON "RefreshToken"("sessionId")`,
     `CREATE INDEX IF NOT EXISTS "Asset_accountId_idx" ON "Asset"("accountId")`,
@@ -117,6 +121,17 @@ async function main(): Promise<void> {
     `UPDATE "Asset" SET "accountId" = ? WHERE "accountId" IS NULL`,
     accountId,
   );
+
+  const accountsNeedingSettings = await prisma.$queryRawUnsafe<{ id: string }[]>(
+    `SELECT a."id" FROM "Account" a LEFT JOIN "AccountSettings" s ON s."accountId" = a."id" WHERE s."id" IS NULL`,
+  );
+  for (const acct of accountsNeedingSettings) {
+    await prisma.$executeRawUnsafe(
+      `INSERT OR IGNORE INTO "AccountSettings" ("id", "accountId", "dateTimeFormat", "timezone", "createdAt", "updatedAt") VALUES (?, ?, 'ISO', 'UTC', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      randomUUID(),
+      acct.id,
+    );
+  }
 
   const refreshTokens = await prisma.$queryRawUnsafe<{ id: string }[]>(
     `SELECT "id" FROM "RefreshToken" WHERE "sessionId" IS NULL`,
