@@ -1,7 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import type { AccountRole } from "@assetx/shared-types";
-import { permissionsForAccountRole } from "@assetx/shared-types";
 import { AuthService, AuthError } from "../services/auth-service.js";
 import { makeAuthGuard } from "../auth-guard.js";
 import type { AppDependencies } from "../dependencies.js";
@@ -139,7 +137,6 @@ export async function registerAuthRoutes(
   app.get("/api/auth/me", { preHandler: authGuard }, async (request, reply) => {
     const user = await deps.prisma.user.findUnique({
       where: { id: request.user!.id },
-      include: { memberships: { include: { account: true } } },
     });
     if (!user) {
       return reply.code(404).send({ error: "User not found" });
@@ -150,29 +147,7 @@ export async function registerAuthRoutes(
       globalRole: user.globalRole,
       createdAt: user.createdAt.toISOString(),
       activeAccount: request.user!.accountId,
-      accounts: user.memberships
-        .filter((m) => m.status === "active" && m.account.status === "active")
-        .map((m) => ({
-          account: {
-            id: m.account.id,
-            name: m.account.name,
-            slug: m.account.slug,
-            status: m.account.status,
-            createdAt: m.account.createdAt.toISOString(),
-            updatedAt: m.account.updatedAt.toISOString(),
-          },
-          membership: {
-            id: m.id,
-            accountId: m.accountId,
-            userId: m.userId,
-            email: user.email,
-            role: m.role,
-            status: m.status,
-            createdAt: m.createdAt.toISOString(),
-            updatedAt: m.updatedAt.toISOString(),
-          },
-          permissions: permissionsForAccountRole(m.role as AccountRole),
-        })),
+      accounts: await service.accountContextsForUser(user.id),
     });
   });
 }
