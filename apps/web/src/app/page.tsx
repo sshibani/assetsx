@@ -23,7 +23,11 @@ export default function GalleryPage() {
     activeAccount,
     permissions,
     switchAccount,
+    isSuperUser,
+    hasPermission,
   } = useAuth();
+  const canAdminAccount =
+    hasPermission("members:manage") || hasPermission("account:update");
   const router = useRouter();
   const [assets, setAssets] = useState<AssetDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,6 +123,16 @@ export default function GalleryPage() {
             <span aria-hidden>＋</span>
             <span className="btn-label">{uploadLabel}</span>
           </button>
+          {canAdminAccount && (
+            <Link className="btn secondary" href="/admin/account">
+              Account admin
+            </Link>
+          )}
+          {isSuperUser && (
+            <Link className="btn secondary" href="/admin/platform">
+              Platform admin
+            </Link>
+          )}
           <button className="btn secondary" onClick={logout}>
             Log out
           </button>

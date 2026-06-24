@@ -507,6 +507,24 @@ h3 {
   font-size: 14px;
 }
 
+/* ---------- Data tables (admin) ---------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  vertical-align: middle;
+}
+.data-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
 /* ---------- Responsive (tablet & down) ---------- */
 @media (max-width: 900px) {
   .detail-grid {
