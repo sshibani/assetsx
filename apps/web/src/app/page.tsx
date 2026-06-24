@@ -14,6 +14,27 @@ function isPdf(asset: AssetDTO): boolean {
   return asset.format.toLowerCase() === "pdf";
 }
 
+function galleryImageSources(asset: AssetDTO): {
+  src: string;
+  srcSet?: string;
+} | null {
+  const candidates = ["thumb", "standard", "large"] as const;
+  const renditions = candidates
+    .map((name) => asset.renditions.find((r) => r.name === name))
+    .filter((r): r is NonNullable<typeof r> => Boolean(r));
+  if (renditions.length === 0) return null;
+
+  const srcSet = renditions
+    .map((r) => `${r.url} ${Math.max(r.width, r.height)}w`)
+    .join(", ");
+  const standard =
+    asset.renditions.find((r) => r.name === "standard") ??
+    asset.renditions.find((r) => r.name === "large") ??
+    renditions[0]!;
+
+  return { src: standard.url, srcSet };
+}
+
 export default function GalleryPage() {
   const {
     client,
@@ -168,17 +189,19 @@ export default function GalleryPage() {
         ) : (
           <div className="grid">
             {assets.map((a) => {
-              const thumb = a.renditions.find((r) => r.name === "thumb");
+              const imageSources = galleryImageSources(a);
               const expired = isExpired(a.expiresAt);
               const pdf = isPdf(a);
               return (
                 <Link key={a.id} href={`/assets/${a.id}`} className="card">
-                  {pdf && !thumb ? (
+                  {pdf && !imageSources ? (
                     <div className="thumb placeholder">PDF document</div>
-                  ) : thumb ? (
+                  ) : imageSources ? (
                     <img
                       className="thumb"
-                      src={thumb.url}
+                      src={imageSources.src}
+                      srcSet={imageSources.srcSet}
+                      sizes="(max-width: 700px) 50vw, (max-width: 1200px) 33vw, 280px"
                       alt={a.title ?? a.originalName}
                     />
                   ) : (

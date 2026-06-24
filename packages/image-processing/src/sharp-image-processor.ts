@@ -53,7 +53,7 @@ export class SharpImageProcessor implements ImageProcessor {
         withoutEnlargement: true,
       });
     }
-    pipeline = pipeline.webp({ quality: 82 });
+    pipeline = pipeline.webp({ quality: spec.quality ?? 82 });
 
     const { data, info } = await pipeline.toBuffer({ resolveWithObject: true });
     return {

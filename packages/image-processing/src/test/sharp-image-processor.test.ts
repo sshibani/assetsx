@@ -47,12 +47,12 @@ describe("SharpImageProcessor.inspect", () => {
 });
 
 describe("SharpImageProcessor.process", () => {
-  it("produces thumb with longest edge <= 200 in webp", async () => {
+  it("produces thumb with longest edge <= 480 in webp", async () => {
     const processor = new SharpImageProcessor();
     const [thumb] = await processor.process(landscape, [DEFAULT_RENDITIONS[0]!]);
     expect(thumb!.name).toBe("thumb");
     expect(thumb!.format).toBe("webp");
-    expect(Math.max(thumb!.width, thumb!.height)).toBeLessThanOrEqual(200);
+    expect(Math.max(thumb!.width, thumb!.height)).toBeLessThanOrEqual(480);
     expect(thumb!.sizeBytes).toBeGreaterThan(0);
   });
 

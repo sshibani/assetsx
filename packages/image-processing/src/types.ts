@@ -27,8 +27,8 @@ export interface ImageProcessor {
 
 /** Default rendition set per the PRD (§3.2). */
 export const DEFAULT_RENDITIONS: RenditionSpec[] = [
-  { name: "thumb", maxDimension: 200, format: "webp", fit: "cover" },
-  { name: "standard", maxDimension: 1024, format: "webp", fit: "inside" },
-  { name: "large", maxDimension: 2048, format: "webp", fit: "inside" },
+  { name: "thumb", maxDimension: 480, quality: 90, format: "webp", fit: "cover" },
+  { name: "standard", maxDimension: 1024, quality: 86, format: "webp", fit: "inside" },
+  { name: "large", maxDimension: 2048, quality: 84, format: "webp", fit: "inside" },
   { name: "original", format: "original", fit: "inside" },
 ];

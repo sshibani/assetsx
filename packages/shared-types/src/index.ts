@@ -93,6 +93,8 @@ export interface RenditionSpec {
   name: RenditionName;
   /** Longest-edge max dimension in pixels. Omit for the untouched original. */
   maxDimension?: number;
+  /** WebP quality from 1-100. Omit to use the image processor default. */
+  quality?: number;
   format: "webp" | "original";
   fit: "cover" | "inside";
 }
