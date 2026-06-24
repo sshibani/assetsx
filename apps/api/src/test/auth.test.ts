@@ -35,6 +35,76 @@ afterEach(async () => {
   await ctx.cleanup();
 });
 
+describe("POST /api/auth/signup", () => {
+  it("creates an account + owner user and returns tokens", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/signup",
+      payload: {
+        accountName: "Acme Corp",
+        email: "founder@acme.test",
+        password: "password123",
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.accessToken).toBeTruthy();
+    expect(body.refreshToken).toBeTruthy();
+    expect(body.user.email).toBe("founder@acme.test");
+    expect(body.user.globalRole).toBe("user");
+    expect(body.accounts).toHaveLength(1);
+    expect(body.activeAccount.account.name).toBe("Acme Corp");
+    expect(body.activeAccount.membership.role).toBe("account_owner");
+
+    // settings row created with defaults
+    const settings = await ctx.prisma.accountSettings.findUnique({
+      where: { accountId: body.activeAccount.account.id },
+    });
+    expect(settings?.dateTimeFormat).toBe("ISO");
+    expect(settings?.timezone).toBe("UTC");
+  });
+
+  it("rejects a duplicate email with 409", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/signup",
+      payload: {
+        accountName: "Dup",
+        email: "admin@assetx.local",
+        password: "password123",
+      },
+    });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it("validates the request body", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/signup",
+      payload: { accountName: "", email: "bad", password: "short" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("generates unique slugs for accounts with the same name", async () => {
+    const first = await app.inject({
+      method: "POST",
+      url: "/api/auth/signup",
+      payload: { accountName: "Same Name", email: "a@x.test", password: "password123" },
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: "/api/auth/signup",
+      payload: { accountName: "Same Name", email: "b@x.test", password: "password123" },
+    });
+    expect(first.statusCode).toBe(201);
+    expect(second.statusCode).toBe(201);
+    expect(first.json().activeAccount.account.slug).not.toBe(
+      second.json().activeAccount.account.slug,
+    );
+  });
+});
+
 describe("POST /api/auth/login", () => {
   it("returns access + refresh tokens for valid credentials", async () => {
     const res = await app.inject({

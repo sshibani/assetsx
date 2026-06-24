@@ -76,6 +76,55 @@ export class AuthService {
     return this.toUserDTO(user);
   }
 
+  async signup(
+    accountName: string,
+    email: string,
+    password: string,
+  ): Promise<AuthTokens> {
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      throw new AuthError("Email already registered", 409);
+    }
+    const slug = await this.uniqueSlug(this.slugFromName(accountName));
+    const userId = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email,
+          passwordHash: await hashPassword(password),
+          globalRole: "user",
+          identities: {
+            create: {
+              provider: "local",
+              providerSubject: email.toLowerCase(),
+              email,
+            },
+          },
+        },
+      });
+      const account = await tx.account.create({
+        data: {
+          name: accountName,
+          slug,
+          settings: { create: {} },
+        },
+      });
+      await tx.accountMembership.create({
+        data: {
+          accountId: account.id,
+          userId: created.id,
+          role: "account_owner",
+        },
+      });
+      return created.id;
+    });
+
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { memberships: { include: { account: true } } },
+    });
+    return this.issueTokens(user, this.defaultAccountId(user));
+  }
+
   async login(email: string, password: string): Promise<AuthTokens> {
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -285,5 +334,27 @@ export class AuthService {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 40) || randomUUID();
+  }
+
+  private slugFromName(name: string): string {
+    return (
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 40) || randomUUID()
+    );
+  }
+
+  private async uniqueSlug(base: string): Promise<string> {
+    let candidate = base;
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const existing = await this.prisma.account.findUnique({
+        where: { slug: candidate },
+      });
+      if (!existing) return candidate;
+      candidate = `${base}-${randomUUID().slice(0, 6)}`.slice(0, 47);
+    }
+    return `${base}-${randomUUID()}`.slice(0, 60);
   }
 }

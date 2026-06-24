@@ -11,6 +11,12 @@ const credentialsSchema = z.object({
   password: z.string().min(8),
 });
 
+const signupSchema = z.object({
+  accountName: z.string().min(1).max(100),
+  email: z.string().email(),
+  password: z.string().min(8),
+});
+
 const refreshSchema = z.object({
   refreshToken: z.string().min(1),
 });
@@ -37,6 +43,26 @@ export async function registerAuthRoutes(
         parsed.data.password,
       );
       return reply.code(201).send(user);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        return reply.code(err.statusCode).send({ error: err.message });
+      }
+      throw err;
+    }
+  });
+
+  app.post("/api/auth/signup", async (request, reply) => {
+    const parsed = signupSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.flatten() });
+    }
+    try {
+      const tokens = await service.signup(
+        parsed.data.accountName,
+        parsed.data.email,
+        parsed.data.password,
+      );
+      return reply.code(201).send(tokens);
     } catch (err) {
       if (err instanceof AuthError) {
         return reply.code(err.statusCode).send({ error: err.message });
