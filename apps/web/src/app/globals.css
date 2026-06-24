@@ -612,6 +612,16 @@ h3 {
 }
 
 /* ---------- Responsive (tablet & down) ---------- */
+/* ---------- EXIF GPS map ---------- */
+.exif-map {
+  width: 100%;
+  height: 220px;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: block;
+}
+
 /* ---------- Chips (e.g. attached bundles) ---------- */
 .chip-list {
   display: flex;

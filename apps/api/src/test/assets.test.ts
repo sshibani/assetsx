@@ -161,6 +161,31 @@ describe("GET /api/assets/:id", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().id).toBe(created.id);
     expect(Array.isArray(res.json().renditions)).toBe(true);
+    // metadata is null until the worker extracts it
+    expect(res.json().metadata).toBeNull();
+  });
+
+  it("exposes extracted metadata from metadataJson in the DTO", async () => {
+    const created = (await uploadImage(token)).json();
+    const metadata = {
+      cameraMake: "Canon",
+      cameraModel: "EOS R5",
+      gps: { lat: 52.37, lng: 4.9, altitude: null },
+    };
+    await ctx.prisma.asset.update({
+      where: { id: created.id },
+      data: { metadataJson: JSON.stringify(metadata) },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.metadata.cameraMake).toBe("Canon");
+    expect(body.metadata.gps.lat).toBeCloseTo(52.37, 2);
   });
 
   it("forbids access to another user's asset", async () => {

@@ -9,6 +9,8 @@ export type {
   AuthAccountContext,
   AssetTimelineItemDTO,
   AssetDTO,
+  ImageMetadataDTO,
+  ImageGpsDTO,
   AuthTokens,
   BundleDTO,
   BundleAssetDTO,

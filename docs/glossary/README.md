@@ -61,6 +61,7 @@ represents and how it is used.
 | [AccountMembershipDTO](./AccountMembershipDTO.md) | Public representation of a membership. |
 | [AccountSettingsDTO](./AccountSettingsDTO.md) | Public representation of account settings. |
 | [AssetDTO](./AssetDTO.md) | Public representation of an asset (with renditions). |
+| [ImageMetadataDTO](./ImageMetadataDTO.md) | Normalized EXIF/IPTC/XMP/ICC metadata extracted from an image (incl. GPS). |
 | [BundleDTO](./BundleDTO.md) | Public representation of a bundle (with asset count). |
 | [BundleDetailDTO](./BundleDetailDTO.md) | A bundle with its full, ordered asset list. |
 | [BundleAssetDTO](./BundleAssetDTO.md) | A bundle entry: position + hydrated asset. |

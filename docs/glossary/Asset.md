@@ -24,6 +24,7 @@ its owner. After upload, a background job processes the asset into one or more
 | `sizeBytes` | int | Original file size. |
 | `title` / `description` | string \| null | Editable metadata. |
 | `metadataSource` | string | [MetadataSource](./MetadataSource.md): `manual` or `llm`. |
+| `metadataJson` | string \| null | Stringified [ImageMetadataDTO](./ImageMetadataDTO.md) (EXIF/IPTC/XMP/ICC). Set by the worker during processing; null until processed and for non-image/EXIF-free files. Does **not** affect `metadataSource`. |
 | `expiresAt` | datetime \| null | Optional expiry. |
 | `createdAt` / `updatedAt` | datetime | Timestamps. |
 

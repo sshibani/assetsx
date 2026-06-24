@@ -43,6 +43,7 @@ export async function processAsset(
     }
 
     const info = await deps.processor.inspect(original);
+    const metadata = await deps.processor.extractMetadata(original);
     const renditions = await deps.processor.process(original, DEFAULT_RENDITIONS);
 
     for (const rendition of renditions) {
@@ -84,6 +85,7 @@ export async function processAsset(
         width: info.width,
         height: info.height,
         format: info.format,
+        metadataJson: metadata ? JSON.stringify(metadata) : null,
       },
     });
   } catch (err) {

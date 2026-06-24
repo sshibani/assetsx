@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@assetx/shared-types": "workspace:*",
+    "exifr": "^7.1.3",
     "sharp": "^0.33.5"
   },
   "devDependencies": {

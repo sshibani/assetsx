@@ -1,10 +1,13 @@
 import sharp from "sharp";
+import exifr from "exifr";
 import type {
   ImageInfo,
+  ImageMetadataDTO,
   ImageProcessor,
   ProcessedRendition,
   RenditionSpec,
 } from "./types.js";
+import { normalizeMetadata, type RawExif } from "./metadata.js";
 
 export class SharpImageProcessor implements ImageProcessor {
   async inspect(input: Buffer): Promise<ImageInfo> {
@@ -18,6 +21,28 @@ export class SharpImageProcessor implements ImageProcessor {
       format: meta.format,
       sizeBytes: input.byteLength,
     };
+  }
+
+  async extractMetadata(input: Buffer): Promise<ImageMetadataDTO | null> {
+    let raw: RawExif | undefined;
+    try {
+      raw = (await exifr.parse(input, {
+        tiff: true,
+        exif: true,
+        gps: true,
+        iptc: true,
+        xmp: true,
+        icc: true,
+        translateValues: true,
+        reviveValues: true,
+        mergeOutput: true,
+      })) as RawExif | undefined;
+    } catch {
+      // Malformed/unsupported metadata or non-image input: treat as "no metadata".
+      return null;
+    }
+    if (!raw || typeof raw !== "object") return null;
+    return normalizeMetadata(raw);
   }
 
   async process(
