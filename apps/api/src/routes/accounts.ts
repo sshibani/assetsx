@@ -36,6 +36,10 @@ const settingsUpdateSchema = z
     message: "At least one field is required",
   });
 
+const adminListQuerySchema = z.object({
+  q: z.string().min(1).max(120).optional(),
+});
+
 function handleError(reply: FastifyReply, err: unknown) {
   if (err instanceof AssetError) {
     return reply.code(err.statusCode).send({ error: err.message });
@@ -53,6 +57,22 @@ export async function registerAccountRoutes(
   app.get("/api/accounts", { preHandler: authGuard }, async (request) => {
     return { items: await service.list(request.user!) };
   });
+
+  app.get(
+    "/api/admin/accounts",
+    { preHandler: authGuard },
+    async (request, reply) => {
+      const parsed = adminListQuerySchema.safeParse(request.query);
+      if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+      try {
+        return reply.send({
+          items: await service.adminList(request.user!, parsed.data),
+        });
+      } catch (err) {
+        return handleError(reply, err);
+      }
+    },
+  );
 
   app.post("/api/accounts", { preHandler: authGuard }, async (request, reply) => {
     const parsed = accountCreateSchema.safeParse(request.body);

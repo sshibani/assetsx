@@ -10,6 +10,7 @@ import type {
   AccountMembershipDTO,
   AccountRole,
   AccountSettingsDTO,
+  AdminAccountDTO,
   DateTimeFormat,
 } from "@assetx/shared-types";
 import type { AuthUser } from "../authorization.js";
@@ -33,6 +34,32 @@ export class AccountService {
       orderBy: { account: { name: "asc" } },
     });
     return memberships.map((m) => this.toAccountDTO(m.account));
+  }
+
+  /** Platform admin: list every account (incl. disabled) with member counts. Super user only. */
+  async adminList(
+    user: AuthUser,
+    query: { q?: string } = {},
+  ): Promise<AdminAccountDTO[]> {
+    if (!isSuperUser(user)) throw new AssetError("Forbidden", 403);
+    const q = query.q?.trim().toLowerCase();
+    const where = q
+      ? {
+          OR: [
+            { name: { contains: q } },
+            { slug: { contains: q } },
+          ],
+        }
+      : undefined;
+    const accounts = await this.prisma.account.findMany({
+      where,
+      include: { _count: { select: { memberships: true } } },
+      orderBy: { name: "asc" },
+    });
+    return accounts.map((a) => ({
+      ...this.toAccountDTO(a),
+      memberCount: a._count.memberships,
+    }));
   }
 
   async create(

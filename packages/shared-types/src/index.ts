@@ -231,6 +231,10 @@ export interface AdminUserDTO extends UserDTO {
   accountCount: number;
 }
 
+export interface AdminAccountDTO extends AccountDTO {
+  memberCount: number;
+}
+
 export interface AdminUserDetailDTO extends UserDTO {
   memberships: AccountMembershipDTO[];
 }

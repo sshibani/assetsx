@@ -3,6 +3,7 @@ export type {
   AccountMembershipDTO,
   AccountSettingsDTO,
   AccountRole,
+  AdminAccountDTO,
   AdminUserDTO,
   AdminUserDetailDTO,
   AuthAccountContext,

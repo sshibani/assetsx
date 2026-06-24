@@ -116,6 +116,22 @@ describe("ApiClient admin & settings methods", () => {
     expect(init.method).toBe("DELETE");
   });
 
+  it("lists admin accounts with a query", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [] }));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.listAdminAccounts("needle");
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/admin/accounts?q=needle");
+  });
+
+  it("lists admin accounts without a query", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [] }));
+    const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });
+    client.setAccessToken("t");
+    await client.listAdminAccounts();
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/admin/accounts");
+  });
+
   it("lists admin users with a query", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ items: [] }));
     const client = new ApiClient({ baseUrl: "", fetchFn: fetchMock });

@@ -507,6 +507,32 @@ h3 {
   font-size: 14px;
 }
 
+/* ---------- Tabs (admin) ---------- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  margin-bottom: 8px;
+}
+.tab {
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.tab:hover {
+  color: var(--text, #111827);
+}
+.tab.active {
+  color: var(--text, #111827);
+  border-bottom-color: var(--brand, #3b82f6);
+}
+
 /* ---------- Data tables (admin) ---------- */
 .data-table {
   width: 100%;

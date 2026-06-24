@@ -3,6 +3,7 @@ import type {
   AccountMembershipDTO,
   AccountRole,
   AccountSettingsDTO,
+  AdminAccountDTO,
   AdminUserDTO,
   AdminUserDetailDTO,
   AuthAccountContext,
@@ -198,6 +199,14 @@ export class ApiClient {
     await this.request<void>(
       `/api/accounts/${accountId}/members/${membershipId}`,
       { method: "DELETE" },
+    );
+  }
+
+  // --- Platform admin: accounts ---
+  async listAdminAccounts(q?: string): Promise<{ items: AdminAccountDTO[] }> {
+    const query = q ? `?q=${encodeURIComponent(q)}` : "";
+    return this.request<{ items: AdminAccountDTO[] }>(
+      `/api/admin/accounts${query}`,
     );
   }
 
