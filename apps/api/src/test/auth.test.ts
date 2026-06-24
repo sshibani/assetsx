@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../app.js";
-import { createTestContext, type TestContext } from "../test-helpers.js";
+import { createTestContext, type TestContext } from "./test-helpers.js";
 import { hashPassword } from "@assetx/auth";
 
 let ctx: TestContext;

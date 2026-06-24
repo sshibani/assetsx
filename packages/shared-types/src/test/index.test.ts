@@ -7,7 +7,7 @@ import {
   RENDITION_NAMES,
   SUPPORTED_MIME_TYPES,
   USER_ROLES,
-} from "./index.js";
+} from "../index.js";
 
 describe("shared-types constants", () => {
   it("exposes the four asset statuses in order", () => {

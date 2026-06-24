@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { LocalPublicChannel } from "./local-public-channel.js";
-import { WebhookChannel } from "./webhook-channel.js";
-import { ChannelRegistry } from "./registry.js";
-import type { PublishableAsset } from "./types.js";
+import { LocalPublicChannel } from "../local-public-channel.js";
+import { WebhookChannel } from "../webhook-channel.js";
+import { ChannelRegistry } from "../registry.js";
+import type { PublishableAsset } from "../types.js";
 
 const asset: PublishableAsset = {
   id: "asset-1",

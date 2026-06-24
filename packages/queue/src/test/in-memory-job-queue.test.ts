@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { InMemoryJobQueue } from "./in-memory-job-queue.js";
+import { InMemoryJobQueue } from "../in-memory-job-queue.js";
 
 describe("InMemoryJobQueue", () => {
   it("records enqueued jobs per queue", async () => {
