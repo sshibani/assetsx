@@ -73,21 +73,33 @@ export default function AssetDetailPage() {
   const canManageBundles = hasPermission("bundles:update");
 
   const load = async () => {
-    const [a, ch, pubs, timelineResult, bundleResult] = await Promise.all([
+    const [a, ch, pubs, timelineResult] = await Promise.all([
       client.getAsset(id),
       client.listChannels(),
       client.listPublications(id),
       client.listAssetTimeline(id),
-      canManageBundles
-        ? client.listBundles()
-        : Promise.resolve({ items: [] as BundleDTO[] }),
     ]);
     setAsset(a);
     setChannels(ch.items);
     setPublications(pubs.items);
     setTimeline(timelineResult.items);
-    setBundles(bundleResult.items);
     setTimelineError(null);
+  };
+
+  // Bundles are a secondary concern on this page: load them separately so a
+  // failure (or lack of permission) never breaks asset loading or triggers the
+  // login redirect in the main load() catch.
+  const loadBundles = async () => {
+    if (!canManageBundles) {
+      setBundles([]);
+      return;
+    }
+    try {
+      const result = await client.listBundles();
+      setBundles(result.items);
+    } catch {
+      setBundles([]);
+    }
   };
 
   const loadTimeline = async () => {
@@ -111,6 +123,13 @@ export default function AssetDetailPage() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Load bundles once permissions are hydrated; never fatal to the page.
+  useEffect(() => {
+    if (!asset) return;
+    void loadBundles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asset?.id, canManageBundles]);
 
   const save = async (data: Partial<AssetDTO>) => {
     if (!canUpdate) return;
