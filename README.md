@@ -1,6 +1,6 @@
 # AssetX — Image Asset Management System
 
-A Node.js/TypeScript monorepo for uploading, processing, enriching, and publishing image assets. See [PRD.md](./PRD.md) for the full product spec.
+A Node.js/TypeScript monorepo for uploading, processing, enriching, and publishing image assets. See [docs/PRD.md](./docs/PRD.md) for the full product spec.
 
 ## Stack
 - **Monorepo:** pnpm workspaces + Turborepo
