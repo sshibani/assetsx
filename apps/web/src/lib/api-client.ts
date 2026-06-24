@@ -1,9 +1,17 @@
 import type {
+  AccountDTO,
+  AccountMembershipDTO,
+  AccountRole,
+  AccountSettingsDTO,
+  AdminUserDTO,
+  AdminUserDetailDTO,
   AuthAccountContext,
   AssetDTO,
   AssetTimelineItemDTO,
   AuthTokens,
   ChannelInfoLike,
+  DateTimeFormat,
+  GlobalRole,
   UserDTO,
   PublicationDTO,
 } from "./types";
@@ -82,6 +90,19 @@ export class ApiClient {
     return tokens;
   }
 
+  async signup(
+    accountName: string,
+    email: string,
+    password: string,
+  ): Promise<AuthTokens> {
+    const tokens = await this.request<AuthTokens>("/api/auth/signup", {
+      method: "POST",
+      body: { accountName, email, password },
+    });
+    this.setAccessToken(tokens.accessToken);
+    return tokens;
+  }
+
   async switchAccount(accountId: string): Promise<AuthTokens> {
     const tokens = await this.request<AuthTokens>("/api/auth/switch-account", {
       method: "POST",
@@ -102,6 +123,102 @@ export class ApiClient {
 
   async listAccounts(): Promise<{ items: AuthAccountContext["account"][] }> {
     return this.request<{ items: AuthAccountContext["account"][] }>("/api/accounts");
+  }
+
+  // --- Account administration ---
+  async createAccount(name: string, slug: string): Promise<AccountDTO> {
+    return this.request<AccountDTO>("/api/accounts", {
+      method: "POST",
+      body: { name, slug },
+    });
+  }
+
+  async getAccount(accountId: string): Promise<AccountDTO> {
+    return this.request<AccountDTO>(`/api/accounts/${accountId}`);
+  }
+
+  async updateAccount(
+    accountId: string,
+    data: Partial<Pick<AccountDTO, "name" | "slug" | "status">>,
+  ): Promise<AccountDTO> {
+    return this.request<AccountDTO>(`/api/accounts/${accountId}`, {
+      method: "PATCH",
+      body: data,
+    });
+  }
+
+  async getAccountSettings(accountId: string): Promise<AccountSettingsDTO> {
+    return this.request<AccountSettingsDTO>(
+      `/api/accounts/${accountId}/settings`,
+    );
+  }
+
+  async updateAccountSettings(
+    accountId: string,
+    data: { dateTimeFormat?: DateTimeFormat; timezone?: string },
+  ): Promise<AccountSettingsDTO> {
+    return this.request<AccountSettingsDTO>(
+      `/api/accounts/${accountId}/settings`,
+      { method: "PUT", body: data },
+    );
+  }
+
+  // --- Members ---
+  async listMembers(
+    accountId: string,
+  ): Promise<{ items: AccountMembershipDTO[] }> {
+    return this.request<{ items: AccountMembershipDTO[] }>(
+      `/api/accounts/${accountId}/members`,
+    );
+  }
+
+  async addMember(
+    accountId: string,
+    email: string,
+    role: AccountRole,
+  ): Promise<AccountMembershipDTO> {
+    return this.request<AccountMembershipDTO>(
+      `/api/accounts/${accountId}/members`,
+      { method: "POST", body: { email, role } },
+    );
+  }
+
+  async updateMember(
+    accountId: string,
+    membershipId: string,
+    data: { role?: AccountRole; status?: "active" | "disabled" },
+  ): Promise<AccountMembershipDTO> {
+    return this.request<AccountMembershipDTO>(
+      `/api/accounts/${accountId}/members/${membershipId}`,
+      { method: "PATCH", body: data },
+    );
+  }
+
+  async removeMember(accountId: string, membershipId: string): Promise<void> {
+    await this.request<void>(
+      `/api/accounts/${accountId}/members/${membershipId}`,
+      { method: "DELETE" },
+    );
+  }
+
+  // --- Platform admin: users ---
+  async listAdminUsers(q?: string): Promise<{ items: AdminUserDTO[] }> {
+    const query = q ? `?q=${encodeURIComponent(q)}` : "";
+    return this.request<{ items: AdminUserDTO[] }>(`/api/admin/users${query}`);
+  }
+
+  async getAdminUser(userId: string): Promise<AdminUserDetailDTO> {
+    return this.request<AdminUserDetailDTO>(`/api/admin/users/${userId}`);
+  }
+
+  async setUserGlobalRole(
+    userId: string,
+    globalRole: GlobalRole,
+  ): Promise<AdminUserDetailDTO> {
+    return this.request<AdminUserDetailDTO>(`/api/admin/users/${userId}`, {
+      method: "PATCH",
+      body: { globalRole },
+    });
   }
 
   // --- Assets ---
