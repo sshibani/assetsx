@@ -72,31 +72,25 @@ describe("POST /api/accounts", () => {
 describe("account memberships", () => {
   it("allows an account owner to add and update a member", async () => {
     const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
-    const member = await createUserWithToken(ctx);
 
     const add = await app.inject({
       method: "POST",
       url: `/api/accounts/${owner.accountId}/members`,
       headers: { authorization: `Bearer ${owner.accessToken}` },
-      payload: { email: `user-${member.userId}@assetx.local`, role: "account_viewer" },
+      payload: { email: "new.member@assetx.local", role: "account_viewer" },
     });
-    expect(add.statusCode).toBe(404);
+    expect(add.statusCode).toBe(201);
+    expect(add.json().email).toBe("new.member@assetx.local");
+    expect(add.json().role).toBe("account_viewer");
 
-    const actualMember = await ctx.prisma.user.findUnique({
-      where: { id: member.userId },
+    const createdMember = await ctx.prisma.user.findUnique({
+      where: { email: "new.member@assetx.local" },
     });
-    const added = await app.inject({
-      method: "POST",
-      url: `/api/accounts/${owner.accountId}/members`,
-      headers: { authorization: `Bearer ${owner.accessToken}` },
-      payload: { email: actualMember!.email, role: "account_viewer" },
-    });
-    expect(added.statusCode).toBe(201);
-    expect(added.json().role).toBe("account_viewer");
+    expect(createdMember?.passwordHash).toBeNull();
 
     const updated = await app.inject({
       method: "PATCH",
-      url: `/api/accounts/${owner.accountId}/members/${added.json().id}`,
+      url: `/api/accounts/${owner.accountId}/members/${add.json().id}`,
       headers: { authorization: `Bearer ${owner.accessToken}` },
       payload: { role: "account_editor" },
     });

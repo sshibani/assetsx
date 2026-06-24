@@ -121,21 +121,47 @@ export class AccountService {
     if (input.role === "account_owner") {
       await this.assertAccountPermission(id, user, "members:manage_admins");
     }
-    const member = await this.prisma.user.findUnique({
-      where: { email: input.email },
-    });
-    if (!member) throw new AssetError("User not found", 404);
 
-    const membership = await this.prisma.accountMembership.upsert({
-      where: { accountId_userId: { accountId: id, userId: member.id } },
-      create: {
-        accountId: id,
-        userId: member.id,
-        role: input.role,
-        status: "active",
-      },
-      update: { role: input.role, status: "active" },
-      include: { user: true },
+    const email = input.email.trim().toLowerCase();
+    const membership = await this.prisma.$transaction(async (tx) => {
+      const member =
+        (await tx.user.findFirst({
+          where: {
+            OR: [
+              { email },
+              {
+                identities: {
+                  some: { provider: "local", providerSubject: email },
+                },
+              },
+            ],
+          },
+        })) ??
+        (await tx.user.create({
+          data: {
+            email,
+            globalRole: "user",
+            identities: {
+              create: {
+                provider: "local",
+                providerSubject: email,
+                email,
+              },
+            },
+          },
+        }));
+
+      return tx.accountMembership.upsert({
+        where: { accountId_userId: { accountId: id, userId: member.id } },
+        create: {
+          accountId: id,
+          userId: member.id,
+          role: input.role,
+          status: "active",
+        },
+        update: { role: input.role, status: "active" },
+        include: { user: true },
+      });
     });
     return this.toMembershipDTO(membership, membership.user);
   }
