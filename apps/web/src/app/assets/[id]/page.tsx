@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { AppFooter } from "../../AppFooter";
 import { useAuth } from "../../../lib/client-context";
 import type {
   AssetDTO,
@@ -144,10 +145,13 @@ export default function AssetDetailPage() {
 
   if (!asset) {
     return (
-      <div className="center-state">
-        <div className="spinner" />
-        <p>Loading asset...</p>
-      </div>
+      <>
+        <div className="center-state">
+          <div className="spinner" />
+          <p>Loading asset...</p>
+        </div>
+        <AppFooter />
+      </>
     );
   }
 
@@ -417,6 +421,7 @@ export default function AssetDetailPage() {
           )}
         </div>
       </main>
+      <AppFooter />
     </>
   );
 }

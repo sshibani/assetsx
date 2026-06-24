@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AppFooter } from "../../AppFooter";
 import { useAuth } from "../../../lib/client-context";
 import { ApiError } from "../../../lib/api-client";
 import { formatterForSettings } from "../../../lib/datetime";
@@ -109,11 +110,14 @@ export default function PlatformAdminPage() {
 
   if (!isSuperUser) {
     return (
-      <main className="container">
-        <h2>Platform administration</h2>
-        <p>This area is restricted to super users.</p>
-        <Link href="/">Back to gallery</Link>
-      </main>
+      <>
+        <main className="container">
+          <h2>Platform administration</h2>
+          <p>This area is restricted to super users.</p>
+          <Link href="/">Back to gallery</Link>
+        </main>
+        <AppFooter />
+      </>
     );
   }
 
@@ -274,6 +278,7 @@ export default function PlatformAdminPage() {
           </table>
         )}
       </main>
+      <AppFooter />
     </>
   );
 }

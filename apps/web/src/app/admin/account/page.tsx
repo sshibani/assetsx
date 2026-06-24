@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AppFooter } from "../../AppFooter";
 import { useAuth } from "../../../lib/client-context";
 import { ApiError } from "../../../lib/api-client";
 import { ACCOUNT_ROLES, DATE_TIME_FORMATS } from "@assetx/shared-types";
@@ -90,19 +91,25 @@ export default function AccountAdminPage() {
 
   if (!accountId) {
     return (
-      <main className="container">
-        <p>No active account.</p>
-      </main>
+      <>
+        <main className="container">
+          <p>No active account.</p>
+        </main>
+        <AppFooter />
+      </>
     );
   }
 
   if (!canManageMembers && !canUpdate) {
     return (
-      <main className="container">
-        <h2>Account administration</h2>
-        <p>You do not have permission to administer this account.</p>
-        <Link href="/">Back to gallery</Link>
-      </main>
+      <>
+        <main className="container">
+          <h2>Account administration</h2>
+          <p>You do not have permission to administer this account.</p>
+          <Link href="/">Back to gallery</Link>
+        </main>
+        <AppFooter />
+      </>
     );
   }
 
@@ -309,6 +316,7 @@ export default function AccountAdminPage() {
           </>
         )}
       </main>
+      <AppFooter />
     </>
   );
 }

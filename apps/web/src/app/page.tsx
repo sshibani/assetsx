@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AppFooter } from "./AppFooter";
 import { useAuth } from "../lib/client-context";
 import type { AssetDTO } from "../lib/types";
 
@@ -221,6 +222,7 @@ export default function GalleryPage() {
           </div>
         )}
       </main>
+      <AppFooter />
     </>
   );
 }
