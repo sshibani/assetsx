@@ -95,35 +95,48 @@ work.** Follow the **Red → Green → Validate** cycle:
 
 ## 5. Commands
 
+### Run the full stack with Docker (primary)
+The whole stack runs in containers (`api`, `worker`, `web`, `redis`) with hot-reload;
+source is bind-mounted. Environment is consolidated in a single root `.env`.
+
 ```bash
-# Install
-pnpm install
+cp .env.example .env        # one env file for every service
+docker compose up --build   # web :3000, api :3001, redis :6379
 
-# Build all workspace packages (apps resolve to dist/)
-pnpm --filter "./packages/*" build
-
-# Test
-pnpm -r test                       # everything
-pnpm --filter @assetx/api test     # one workspace
-pnpm --filter @assetx/api test auth  # one file/pattern
-
-# Quality gates
-pnpm -r typecheck
-
-# Run (3 terminals)
-pnpm --filter @assetx/api dev      # http://localhost:3001
-pnpm --filter @assetx/worker dev
-pnpm --filter @assetx/web dev      # http://localhost:3000
+docker compose logs -f api worker   # follow logs
+docker compose down                 # stop (keep data)
+docker compose down -v              # stop + wipe volumes (fresh DB)
 ```
 
-### Local environment
-- Start Redis with `docker compose up -d redis` (Colima or Docker Desktop).
-- Create/seed the dev DB:
-  ```bash
-  cd apps/api
-  DATABASE_URL="file:./dev.sqlite" pnpm prisma db push
-  DATABASE_URL="file:./dev.sqlite" pnpm db:seed   # admin@assetx.local / admin12345
-  ```
+A one-shot `migrate` service runs `db:push` → `db:seed` → backfill before the apps
+start. The SQLite DB and uploaded files live on the shared `app-data` volume
+(`/data/db`, `/data/storage`); api and worker mount it together.
+
+### Test & quality gates (run on the host)
+```bash
+pnpm install
+pnpm --filter "./packages/*" build   # build workspace packages (apps resolve to dist/)
+pnpm -r test                         # everything
+pnpm --filter @assetx/api test       # one workspace
+pnpm --filter @assetx/api test auth  # one file/pattern
+pnpm -r typecheck
+```
+
+### Local (no Docker) alternative
+```bash
+docker compose up -d redis           # Redis only (Colima or Docker Desktop)
+cp .env.example .env                 # adjust DATABASE_URL/STORAGE_ROOT to local paths
+cd apps/api
+DATABASE_URL="file:./dev.sqlite" pnpm prisma db push
+DATABASE_URL="file:./dev.sqlite" pnpm db:seed   # admin@assetx.local / admin12345
+cd ../..
+pnpm --filter @assetx/api dev        # + worker dev, web dev
+```
+
+### Container env note
+Compose injects env via `env_file: .env`, so containers use `dev:container` scripts
+(no `--env-file` flag). The host `dev` scripts still load `../../.env` via
+`--env-file` for non-Docker local runs.
 
 ## 6. Workflow expectations for agents
 

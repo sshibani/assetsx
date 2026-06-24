@@ -9,6 +9,7 @@ A Node.js/TypeScript monorepo for uploading, processing, enriching, and publishi
 - **Frontend:** Next.js (App Router, React 19)
 - **Image processing:** sharp · **Auth:** argon2 + JWT
 - **Tests:** Vitest (built fully via TDD)
+- **Dev runtime:** Docker Compose (api, worker, web, redis) with hot-reload
 
 ## Layout
 ```
@@ -25,34 +26,56 @@ packages/
   queue/             JobQueue abstraction (BullMQ + in-memory)
 ```
 
-## Setup
+## Run with Docker (recommended)
+
+The entire stack — **api, worker, web, and redis** — runs in containers with
+hot-reload (source is bind-mounted). All environment is consolidated in a single
+root `.env`.
+
+```bash
+# 1. Create your env file (one file for every service)
+cp .env.example .env
+
+# 2. Build and start everything
+docker compose up --build
+```
+
+- Web → http://localhost:3000
+- API → http://localhost:3001
+- Redis → localhost:6379
+
+A one-shot `migrate` service prepares the SQLite schema and seeds the super user
+(`admin@assetx.local` / `admin12345`) before `api`/`worker` start. The database and
+uploaded files live on a shared `app-data` volume (`/data/db`, `/data/storage`).
+
+```bash
+docker compose up -d --build        # detached
+docker compose logs -f api worker   # follow logs
+docker compose down                 # stop (keep data)
+docker compose down -v              # stop and wipe volumes (fresh DB)
+```
+
+## Run locally without Docker (alternative)
 ```bash
 pnpm install
 
-# 1. Start Redis
+# 1. Start Redis only
 docker compose up -d redis
 
-# 2. Configure & create the database
-cp apps/api/.env.example apps/api/.env
+# 2. Configure & create the database (uses the root .env)
+cp .env.example .env   # then adjust DATABASE_URL/STORAGE_ROOT to local paths
 cd apps/api
 DATABASE_URL="file:./dev.sqlite" pnpm prisma db push
-DATABASE_URL="file:./dev.sqlite" pnpm db:seed   # creates admin@assetx.local / admin12345
+DATABASE_URL="file:./dev.sqlite" pnpm db:seed
 cd ../..
 
 # 3. Build workspace packages (apps resolve to dist/)
 pnpm --filter "./packages/*" build
-```
 
-## Run (3 terminals)
-```bash
-# API  (http://localhost:3001)
-pnpm --filter @assetx/api dev
-
-# Worker
+# 4. Run each app (3 terminals)
+pnpm --filter @assetx/api dev       # http://localhost:3001
 pnpm --filter @assetx/worker dev
-
-# Web  (http://localhost:3000)
-pnpm --filter @assetx/web dev
+pnpm --filter @assetx/web dev       # http://localhost:3000
 ```
 
 ## Test

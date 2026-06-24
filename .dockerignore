@@ -1,0 +1,29 @@
+# Dependencies (reinstalled inside the image)
+node_modules
+**/node_modules
+
+# Build outputs (rebuilt inside the image)
+**/dist
+**/.next
+**/.turbo
+.turbo
+
+# Local data (provided via volumes, not the image)
+storage-data
+**/*.sqlite
+**/*.sqlite-journal
+apps/api/prisma/dev.sqlite
+
+# Env & secrets (provided via env_file)
+.env
+.env.local
+**/.env
+**/.env.local
+
+# VCS & misc
+.git
+.gitignore
+*.log
+npm-debug.log*
+.DS_Store
+coverage

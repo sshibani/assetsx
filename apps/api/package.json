@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "node --env-file=../../.env --watch --import tsx src/index.ts",
+    "dev:container": "node --watch --import tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -15,6 +16,7 @@
     "prisma:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "accounts:backfill": "node --env-file=../../.env --import tsx prisma/backfill-accounts.ts",
+    "accounts:backfill:container": "node --import tsx prisma/backfill-accounts.ts",
     "db:seed": "node --import tsx prisma/seed.ts"
   },
   "dependencies": {
