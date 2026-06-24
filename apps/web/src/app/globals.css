@@ -612,9 +612,136 @@ h3 {
 }
 
 /* ---------- Responsive (tablet & down) ---------- */
+/* ---------- Left navigation / app shell ---------- */
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-content {
+  margin-left: 248px;
+}
+
+.sidenav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 16px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 20;
+}
+
+.sidenav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  padding: 4px 8px 16px;
+}
+
+.sidenav-brand-name {
+  white-space: nowrap;
+}
+
+.sidenav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidenav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.sidenav-link:hover {
+  background: var(--surface-2);
+}
+
+.sidenav-link.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.sidenav-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sidenav-logout {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.sidenav-logout:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 @media (max-width: 900px) {
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+  .app-content {
+    margin-left: 0;
+    padding-bottom: 76px;
+  }
+  .sidenav {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+  .sidenav-brand,
+  .sidenav-logout span:not(.sidenav-icon) {
+    display: none;
+  }
+  .sidenav-links {
+    flex-direction: row;
+    flex: 1;
+    justify-content: space-around;
+  }
+  .sidenav-link span:not(.sidenav-icon) {
+    display: none;
+  }
+  .sidenav-logout {
+    margin-top: 0;
+    border: none;
   }
 }
 

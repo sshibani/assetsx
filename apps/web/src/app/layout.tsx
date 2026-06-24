@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Viewport } from "next";
 import { AuthProvider } from "../lib/client-context";
+import { AppShell } from "../components/app-shell";
 import "./globals.css";
 
 export const metadata = {
@@ -19,7 +20,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );
