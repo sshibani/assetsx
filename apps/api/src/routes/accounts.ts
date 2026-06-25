@@ -53,7 +53,7 @@ export async function registerAccountRoutes(
   app: FastifyInstance,
   deps: AppDependencies,
 ): Promise<void> {
-  const service = new AccountService(deps.prisma);
+  const service = new AccountService(deps.prisma, deps.storage);
   const authGuard = makeAuthGuard(deps.tokens, deps.prisma);
 
   app.get("/api/accounts", { preHandler: authGuard }, async (request) => {
@@ -193,6 +193,39 @@ export async function registerAccountRoutes(
       const { accountId } = request.params as { accountId: string };
       try {
         return reply.send(await service.getUsage(accountId, request.user!));
+      } catch (err) {
+        return handleError(reply, err);
+      }
+    },
+  );
+
+  app.post(
+    "/api/accounts/:accountId/logo",
+    { preHandler: authGuard },
+    async (request, reply) => {
+      const { accountId } = request.params as { accountId: string };
+      const file = await request.file();
+      if (!file) {
+        return reply.code(400).send({ error: "No file uploaded" });
+      }
+      const buffer = await file.toBuffer();
+      try {
+        return reply.send(
+          await service.uploadLogo(accountId, request.user!, { buffer }),
+        );
+      } catch (err) {
+        return handleError(reply, err);
+      }
+    },
+  );
+
+  app.delete(
+    "/api/accounts/:accountId/logo",
+    { preHandler: authGuard },
+    async (request, reply) => {
+      const { accountId } = request.params as { accountId: string };
+      try {
+        return reply.send(await service.removeLogo(accountId, request.user!));
       } catch (err) {
         return handleError(reply, err);
       }

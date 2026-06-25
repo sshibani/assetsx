@@ -157,6 +157,25 @@ export class ApiClient {
     return this.request<AccountUsageDTO>(`/api/accounts/${accountId}/usage`);
   }
 
+  async uploadAccountLogo(
+    accountId: string,
+    file: File,
+  ): Promise<AccountSettingsDTO> {
+    const form = new FormData();
+    form.set("file", file);
+    return this.request<AccountSettingsDTO>(
+      `/api/accounts/${accountId}/logo`,
+      { method: "POST", body: form, isForm: true },
+    );
+  }
+
+  async removeAccountLogo(accountId: string): Promise<AccountSettingsDTO> {
+    return this.request<AccountSettingsDTO>(
+      `/api/accounts/${accountId}/logo`,
+      { method: "DELETE" },
+    );
+  }
+
   async getAccountSettings(accountId: string): Promise<AccountSettingsDTO> {
     return this.request<AccountSettingsDTO>(
       `/api/accounts/${accountId}/settings`,

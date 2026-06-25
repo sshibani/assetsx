@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/client-context";
 import type { AccountMembershipDTO } from "../../lib/types";
@@ -51,6 +51,8 @@ export default function SettingsPage() {
   const [savingBrand, setSavingBrand] = useState(false);
   const canUpdateAccount = hasPermission("account:update");
   const [usageLabel, setUsageLabel] = useState<string>("—");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
 
   useEffect(() => {
     if (!activeId) return;
@@ -59,6 +61,7 @@ export default function SettingsPage() {
       .getAccountSettings(activeId)
       .then((s) => {
         if (s.brandColor) setBrandColor(s.brandColor);
+        setLogoUrl(s.logoUrl);
       })
       .catch(() => undefined);
     if (canManageMembers) {
@@ -84,6 +87,28 @@ export default function SettingsPage() {
       setBrandColor(updated.brandColor);
     } finally {
       setSavingBrand(false);
+    }
+  };
+
+  const uploadLogo = async (file: File) => {
+    if (!activeId || !canUpdateAccount) return;
+    setLogoBusy(true);
+    try {
+      const updated = await client.uploadAccountLogo(activeId, file);
+      setLogoUrl(updated.logoUrl);
+    } finally {
+      setLogoBusy(false);
+    }
+  };
+
+  const removeLogo = async () => {
+    if (!activeId || !canUpdateAccount) return;
+    setLogoBusy(true);
+    try {
+      const updated = await client.removeAccountLogo(activeId);
+      setLogoUrl(updated.logoUrl);
+    } finally {
+      setLogoBusy(false);
     }
   };
 
@@ -130,6 +155,10 @@ export default function SettingsPage() {
               saving={savingBrand}
               onSelect={setBrandColor}
               onSave={saveBrandColor}
+              logoUrl={logoUrl}
+              logoBusy={logoBusy}
+              onUploadLogo={uploadLogo}
+              onRemoveLogo={removeLogo}
             />
           )}
           {tab === "members" && (
@@ -160,6 +189,10 @@ function BrandingTab({
   saving,
   onSelect,
   onSave,
+  logoUrl,
+  logoBusy,
+  onUploadLogo,
+  onRemoveLogo,
 }: {
   tenantName: string;
   brandColor: string;
@@ -167,7 +200,12 @@ function BrandingTab({
   saving: boolean;
   onSelect: (c: string) => void;
   onSave: (c: string) => void | Promise<void>;
+  logoUrl: string | null;
+  logoBusy: boolean;
+  onUploadLogo: (file: File) => void | Promise<void>;
+  onRemoveLogo: () => void | Promise<void>;
 }) {
+  const logoInput = useRef<HTMLInputElement>(null);
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 380px", gap: 36, maxWidth: 1100 }}>
       <div className="vault-panel">
@@ -177,12 +215,54 @@ function BrandingTab({
           <input className="vault-input" defaultValue={tenantName} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 60, height: 60, borderRadius: 14, background: brandColor }} />
-          <button className="vault-btn" disabled title="Logo upload coming soon">
-            Replace logo
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 14,
+              background: logoUrl ? "var(--surface-2)" : brandColor,
+              overflow: "hidden",
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            {logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt="Workspace logo"
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
+            )}
+          </div>
+          <button
+            className="vault-btn"
+            disabled={!canUpdate || logoBusy}
+            onClick={() => logoInput.current?.click()}
+          >
+            {logoBusy ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
           </button>
+          {logoUrl && (
+            <button
+              className="vault-btn"
+              disabled={!canUpdate || logoBusy}
+              onClick={() => void onRemoveLogo()}
+            >
+              Remove
+            </button>
+          )}
+          <input
+            ref={logoInput}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void onUploadLogo(file);
+              e.target.value = "";
+            }}
+          />
         </div>
-        {/* Logo upload deferred — see ASS-48 follow-up. */}
 
         <div className="vault-divider" />
 
