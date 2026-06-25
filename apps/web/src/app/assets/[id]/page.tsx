@@ -153,6 +153,37 @@ export default function AssetDetailPage() {
               onBlur={(e) => save({ description: e.target.value })}
             />
           </div>
+          <div className="vault-field">
+            <label className="vault-field-label">Expiry date</label>
+            <input
+              className="vault-input"
+              type="date"
+              defaultValue={asset.expiresAt?.slice(0, 10) ?? ""}
+              disabled={!canUpdate}
+              onBlur={(e) =>
+                save({ expiresAt: e.target.value === "" ? null : e.target.value })
+              }
+            />
+            {asset.expiresAt && (
+              <p
+                style={{
+                  fontSize: 12,
+                  marginTop: 4,
+                  color:
+                    new Date(asset.expiresAt).getTime() < Date.now()
+                      ? "var(--danger-fg)"
+                      : "var(--text-muted)",
+                }}
+              >
+                {new Date(asset.expiresAt).getTime() < Date.now()
+                  ? "Expired"
+                  : "Expires"}{" "}
+                {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+                  new Date(asset.expiresAt),
+                )}
+              </p>
+            )}
+          </div>
 
           <div className="vault-divider" />
 
