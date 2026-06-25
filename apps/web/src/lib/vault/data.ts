@@ -26,6 +26,7 @@ import {
 import {
   classifyAssetType,
   formatStorageLabel,
+  relativeTime,
 } from "./format";
 
 function bestRendition(asset: AssetDTO, names: string[]): string | null {
@@ -104,6 +105,12 @@ function memberStatus(status: string): VaultMemberStatus {
   return "Invited";
 }
 
+function lastActiveLabel(m: AccountMembershipDTO): string {
+  if (m.status !== "active") return "Invited";
+  if (!m.lastActiveAt) return "—";
+  return relativeTime(m.lastActiveAt);
+}
+
 export function toVaultMember(m: AccountMembershipDTO): VaultMember {
   return {
     id: m.id,
@@ -111,20 +118,17 @@ export function toVaultMember(m: AccountMembershipDTO): VaultMember {
     email: m.email,
     role: memberRole(m.role),
     status: memberStatus(m.status),
-    // ASS-52: last-active tracking not available.
-    lastActive: m.status === "active" ? "—" : "Invited",
+    lastActive: lastActiveLabel(m),
     avatarColor: avatarColor(m.email),
   };
 }
 
-const TENANT_PLANS: VaultTenantPlan[] = ["Business", "Enterprise", "Team", "Trial"];
-
-/** Deterministic stub plan until ASS-52 ships a real plan field. */
-function stubPlan(seed: string): VaultTenantPlan {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return TENANT_PLANS[hash % TENANT_PLANS.length]!;
-}
+const PLAN_LABELS: Record<string, VaultTenantPlan> = {
+  trial: "Trial",
+  team: "Team",
+  business: "Business",
+  enterprise: "Enterprise",
+};
 
 export function toVaultTenant(
   ctx: AuthAccountContext,
@@ -135,7 +139,7 @@ export function toVaultTenant(
     id: account.id,
     name: account.name,
     domain: `${account.slug}.vault.app`,
-    plan: stubPlan(account.id),
+    plan: PLAN_LABELS[account.plan] ?? "Trial",
     memberCount: null,
     // ASS-49: storage usage not available.
     storageLabel: "—",

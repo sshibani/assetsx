@@ -323,11 +323,15 @@ export type AssetTimelineItemDTO =
       activity: AssetActivityDTO;
     };
 
+export const ACCOUNT_PLANS = ["trial", "team", "business", "enterprise"] as const;
+export type AccountPlan = (typeof ACCOUNT_PLANS)[number];
+
 export interface AccountDTO {
   id: string;
   name: string;
   slug: string;
   status: AccountStatus;
+  plan: AccountPlan;
   createdAt: string;
   updatedAt: string;
 }
@@ -339,6 +343,7 @@ export interface AccountMembershipDTO {
   email: string;
   role: AccountRole;
   status: MembershipStatus;
+  lastActiveAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

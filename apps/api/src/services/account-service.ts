@@ -312,6 +312,7 @@ export class AccountService {
       name: account.name,
       slug: account.slug,
       status: account.status as AccountDTO["status"],
+      plan: account.plan as AccountDTO["plan"],
       createdAt: account.createdAt.toISOString(),
       updatedAt: account.updatedAt.toISOString(),
     };
@@ -342,6 +343,7 @@ export class AccountService {
       email: user.email,
       role: membership.role as AccountRole,
       status: membership.status as AccountMembershipDTO["status"],
+      lastActiveAt: membership.lastActiveAt?.toISOString() ?? null,
       createdAt: membership.createdAt.toISOString(),
       updatedAt: membership.updatedAt.toISOString(),
     };

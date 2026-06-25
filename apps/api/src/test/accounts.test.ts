@@ -34,6 +34,54 @@ describe("GET /api/accounts", () => {
   });
 });
 
+describe("account plan + member last-active metadata", () => {
+  it("exposes a default plan on the account DTO", async () => {
+    const user = await createUserWithToken(ctx);
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/accounts",
+      headers: { authorization: `Bearer ${user.accessToken}` },
+    });
+    expect(res.json().items[0].plan).toBe("trial");
+  });
+
+  it("records lastActiveAt for a member's membership after an authenticated request", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+
+    // before: no activity recorded yet for this membership
+    const before = await ctx.prisma.accountMembership.findFirst({
+      where: { accountId: owner.accountId!, userId: owner.userId },
+    });
+    expect(before?.lastActiveAt ?? null).toBeNull();
+
+    // any authenticated, account-scoped request should stamp lastActiveAt
+    await app.inject({
+      method: "GET",
+      url: `/api/accounts/${owner.accountId}/members`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+
+    const after = await ctx.prisma.accountMembership.findFirst({
+      where: { accountId: owner.accountId!, userId: owner.userId },
+    });
+    expect(after?.lastActiveAt).toBeTruthy();
+  });
+
+  it("returns lastActiveAt in the members listing", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/accounts/${owner.accountId}/members`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const me = res.json().items.find(
+      (m: { userId: string }) => m.userId === owner.userId,
+    );
+    expect(me).toHaveProperty("lastActiveAt");
+  });
+});
+
 describe("POST /api/accounts", () => {
   it("allows a super user to create an account", async () => {
     const superUser = await createUserWithToken(ctx, { role: "super_user" });
