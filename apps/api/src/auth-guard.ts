@@ -12,6 +12,9 @@ declare module "fastify" {
   }
 }
 
+/** Minimum gap between member lastActiveAt writes (throttle DB writes). */
+const LAST_ACTIVE_THROTTLE_MS = 60_000;
+
 /** Extracts and verifies a Bearer access token; 401 on failure. */
 export function makeAuthGuard(tokens: TokenService, prisma?: PrismaClient) {
   return async function authGuard(
@@ -62,6 +65,22 @@ export function makeAuthGuard(tokens: TokenService, prisma?: PrismaClient) {
             : user.globalRole === "super_user"
               ? (["platform:manage"] as Permission[])
               : [];
+
+          // Stamp member activity (throttled, fire-and-forget). Only write when
+          // the last stamp is older than the throttle window to avoid a DB
+          // write on every authenticated request.
+          if (membership) {
+            const now = Date.now();
+            const last = membership.lastActiveAt?.getTime() ?? 0;
+            if (now - last > LAST_ACTIVE_THROTTLE_MS) {
+              await prisma.accountMembership
+                .update({
+                  where: { id: membership.id },
+                  data: { lastActiveAt: new Date(now) },
+                })
+                .catch(() => undefined);
+            }
+          }
         } else {
           accountRole = null;
           permissions =
