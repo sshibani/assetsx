@@ -6,6 +6,7 @@ import type {
   PublicAssetDTO,
   RenditionName,
 } from "@assetx/shared-types";
+import { classifyAssetType } from "@assetx/shared-types";
 import { parseJsonObject } from "../lib/json.js";
 
 /** Storage key for an asset's original (uploaded) file. */
@@ -40,6 +41,7 @@ export function assetToDTO(
     metadataSource: asset.metadataSource as AssetDTO["metadataSource"],
     metadata: parseJsonObject<ImageMetadataDTO>(asset.metadataJson),
     tags,
+    type: classifyAssetType(asset.format, tags),
     renditions: renditions.map((r) => ({
       id: r.id,
       name: r.name as RenditionName,

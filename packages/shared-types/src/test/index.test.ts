@@ -4,6 +4,8 @@ import {
   PERMISSIONS,
   permissionsForAccountRole,
   ASSET_STATUSES,
+  ASSET_TYPES,
+  classifyAssetType,
   RENDITION_NAMES,
   SUPPORTED_MIME_TYPES,
   USER_ROLES,
@@ -107,5 +109,31 @@ describe("shared-types constants", () => {
     const viewer = permissionsForAccountRole("account_viewer");
     expect(owner).not.toEqual(editor);
     expect(editor).not.toEqual(viewer);
+  });
+});
+
+describe("classifyAssetType", () => {
+  it("exposes the three asset types", () => {
+    expect(ASSET_TYPES).toEqual(["image", "document", "logo"]);
+  });
+
+  it("classifies raster formats as image", () => {
+    for (const f of ["jpg", "JPEG", "png", "webp", "gif"]) {
+      expect(classifyAssetType(f)).toBe("image");
+    }
+  });
+
+  it("classifies svg as logo", () => {
+    expect(classifyAssetType("svg")).toBe("logo");
+  });
+
+  it("classifies pdf/unknown as document", () => {
+    expect(classifyAssetType("pdf")).toBe("document");
+    expect(classifyAssetType("xyz")).toBe("document");
+  });
+
+  it("treats a 'logo' tag as logo even for raster formats", () => {
+    expect(classifyAssetType("png", ["logo"])).toBe("logo");
+    expect(classifyAssetType("png", ["hero"])).toBe("image");
   });
 });

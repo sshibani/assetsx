@@ -37,7 +37,9 @@ function bestRendition(asset: AssetDTO, names: string[]): string | null {
 }
 
 export function toVaultAsset(asset: AssetDTO): VaultAsset {
-  const type = classifyAssetType(asset.format);
+  // Prefer the server-authoritative type; fall back to format-based classify
+  // for older payloads that predate the `type` field.
+  const type = asset.type ?? classifyAssetType(asset.format);
   const thumbnailUrl = bestRendition(asset, ["thumb", "standard", "large"]);
   const previewUrl =
     bestRendition(asset, ["large", "standard", "thumb"]) ??
