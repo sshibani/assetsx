@@ -29,14 +29,31 @@ export function AppShell({ children }: { children: ReactNode }) {
     // Optimistic fallback while the request is in flight.
     setBrand(brandColorForAccount(accountId));
     let cancelled = false;
-    client
-      .getAccountSettings(accountId)
-      .then((s) => {
-        if (!cancelled && s.brandColor) setBrand(s.brandColor);
-      })
-      .catch(() => undefined);
+
+    const refresh = () => {
+      client
+        .getAccountSettings(accountId)
+        .then((s) => {
+          if (!cancelled && s.brandColor) setBrand(s.brandColor);
+        })
+        .catch(() => undefined);
+    };
+    refresh();
+
+    // Re-fetch when branding is changed elsewhere (e.g. Settings save) so the
+    // accent applies app-wide without a full reload.
+    const onChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ accountId?: string; brandColor?: string }>)
+        .detail;
+      if (detail?.accountId && detail.accountId !== accountId) return;
+      if (detail?.brandColor) setBrand(detail.brandColor);
+      else refresh();
+    };
+    window.addEventListener("assetx:branding-changed", onChanged);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("assetx:branding-changed", onChanged);
     };
   }, [client, accountId]);
 

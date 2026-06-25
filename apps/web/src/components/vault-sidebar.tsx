@@ -47,6 +47,16 @@ export function VaultSidebar() {
           setCounts({ assets: a.items.length, bundles: b.items.length });
       })
       .catch(() => undefined);
+    const loadLogo = () => {
+      if (!accountId) return;
+      client
+        .getAccountSettings(accountId)
+        .then((s) => {
+          if (!cancelled) setLogoUrl(s.logoUrl);
+        })
+        .catch(() => undefined);
+    };
+
     if (accountId) {
       client
         .getAccountUsage(accountId)
@@ -54,15 +64,16 @@ export function VaultSidebar() {
           if (!cancelled) setStorage(toStorageUsage(u));
         })
         .catch(() => undefined);
-      client
-        .getAccountSettings(accountId)
-        .then((s) => {
-          if (!cancelled) setLogoUrl(s.logoUrl);
-        })
-        .catch(() => undefined);
+      loadLogo();
     }
+
+    // Refresh the logo when branding changes elsewhere.
+    const onBranding = () => loadLogo();
+    window.addEventListener("assetx:branding-changed", onBranding);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("assetx:branding-changed", onBranding);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, accountId]);

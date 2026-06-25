@@ -300,6 +300,49 @@ describe("account usage", () => {
     expect(res.json().usedBytes).toBe(1250);
   });
 
+  it("lets a super user set an explicit quota that overrides the plan default", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const superUser = await createUserWithToken(ctx, { role: "super_user" });
+
+    const set = await app.inject({
+      method: "PUT",
+      url: `/api/accounts/${owner.accountId}/quota`,
+      headers: { authorization: `Bearer ${superUser.accessToken}` },
+      payload: { quotaBytes: 12345 },
+    });
+    expect(set.statusCode).toBe(200);
+    expect(set.json().quotaBytes).toBe(12345);
+
+    // reflected in the usage endpoint
+    const usage = await app.inject({
+      method: "GET",
+      url: `/api/accounts/${owner.accountId}/usage`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(usage.json().quotaBytes).toBe(12345);
+
+    // clearing restores the plan default
+    const cleared = await app.inject({
+      method: "PUT",
+      url: `/api/accounts/${owner.accountId}/quota`,
+      headers: { authorization: `Bearer ${superUser.accessToken}` },
+      payload: { quotaBytes: null },
+    });
+    expect(cleared.json().quotaBytes).toBeGreaterThan(0);
+    expect(cleared.json().quotaBytes).not.toBe(12345);
+  });
+
+  it("forbids a non-super-user from setting a quota", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/accounts/${owner.accountId}/quota`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+      payload: { quotaBytes: 99 },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
   it("forbids reading usage for another account", async () => {
     const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
     const other = await createUserWithToken(ctx, { accountRole: "account_owner" });

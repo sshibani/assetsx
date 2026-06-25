@@ -29,6 +29,7 @@ model Account {
   slug        String              @unique
   status      String              @default("active") // active | disabled
   plan        String              @default("trial") // trial | team | business | enterprise
+  storageQuotaBytes BigInt?       // explicit quota override; falls back to plan default when null
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   memberships AccountMembership[]

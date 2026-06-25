@@ -13,6 +13,10 @@ import {
 import { BRAND_SWATCHES, type VaultMember, type VaultTenant } from "../../lib/vault/model";
 import { Icon } from "../../components/ui/Icon";
 import { Avatar } from "../../components/ui/Avatar";
+import {
+  CreateTenantModal,
+  InviteMemberModal,
+} from "../../components/vault/settings-modals";
 
 type Tab = "branding" | "members" | "tenants";
 
@@ -24,17 +28,29 @@ export default function SettingsPage() {
     activeAccount,
     switchAccount,
     hasPermission,
+    isSuperUser,
   } = useAuth();
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<Tab>("branding");
   const [members, setMembers] = useState<AccountMembershipDTO[]>([]);
+  const [modal, setModal] = useState<null | "invite" | "tenant">(null);
 
   const activeId = activeAccount?.account.id ?? null;
   const [brandColor, setBrandColor] = useState<string>(
     activeId ? brandColorForAccount(activeId) : "#343ced",
   );
   const canManageMembers = hasPermission("members:read") || hasPermission("members:manage");
+  const canInviteMembers = hasPermission("members:manage");
+  const canManageAdmins = hasPermission("members:manage_admins");
+
+  const loadMembers = () => {
+    if (!activeId || !canManageMembers) return;
+    client
+      .listMembers(activeId)
+      .then((r) => setMembers(r.items))
+      .catch(() => setMembers([]));
+  };
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -85,6 +101,12 @@ export default function SettingsPage() {
         brandColor: color,
       });
       setBrandColor(updated.brandColor);
+      // Notify the app shell so the accent applies app-wide immediately.
+      window.dispatchEvent(
+        new CustomEvent("assetx:branding-changed", {
+          detail: { accountId: activeId, brandColor: updated.brandColor },
+        }),
+      );
     } finally {
       setSavingBrand(false);
     }
@@ -96,6 +118,9 @@ export default function SettingsPage() {
     try {
       const updated = await client.uploadAccountLogo(activeId, file);
       setLogoUrl(updated.logoUrl);
+      window.dispatchEvent(
+        new CustomEvent("assetx:branding-changed", { detail: { accountId: activeId } }),
+      );
     } finally {
       setLogoBusy(false);
     }
@@ -107,6 +132,9 @@ export default function SettingsPage() {
     try {
       const updated = await client.removeAccountLogo(activeId);
       setLogoUrl(updated.logoUrl);
+      window.dispatchEvent(
+        new CustomEvent("assetx:branding-changed", { detail: { accountId: activeId } }),
+      );
     } finally {
       setLogoBusy(false);
     }
@@ -162,7 +190,11 @@ export default function SettingsPage() {
             />
           )}
           {tab === "members" && (
-            <MembersTab members={members.map(toVaultMember)} />
+            <MembersTab
+              members={members.map(toVaultMember)}
+              canInvite={canInviteMembers}
+              onInvite={() => setModal("invite")}
+            />
           )}
           {tab === "tenants" && (
             <TenantsTab
@@ -173,11 +205,32 @@ export default function SettingsPage() {
                   ? { ...tenant, storageLabel: usageLabel }
                   : tenant;
               })}
+              canCreate={isSuperUser}
+              onCreate={() => setModal("tenant")}
               onSwitch={(tid) => switchAccount(tid)}
             />
           )}
         </div>
       </div>
+
+      {modal === "invite" && activeId && (
+        <InviteMemberModal
+          accountId={activeId}
+          canManageAdmins={canManageAdmins}
+          onClose={() => setModal(null)}
+          onInvited={loadMembers}
+        />
+      )}
+      {modal === "tenant" && (
+        <CreateTenantModal
+          onClose={() => setModal(null)}
+          onCreated={() => {
+            // New account membership requires a token refresh to appear; a
+            // simple reload re-hydrates accounts + permissions.
+            window.location.reload();
+          }}
+        />
+      )}
     </>
   );
 }
@@ -333,7 +386,15 @@ function BrandingTab({
   );
 }
 
-function MembersTab({ members }: { members: VaultMember[] }) {
+function MembersTab({
+  members,
+  canInvite,
+  onInvite,
+}: {
+  members: VaultMember[];
+  canInvite: boolean;
+  onInvite: () => void;
+}) {
   return (
     <div style={{ maxWidth: 1040 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -343,11 +404,12 @@ function MembersTab({ members }: { members: VaultMember[] }) {
             People who can access this workspace.
           </p>
         </div>
-        {/* TODO: wire invite to addMember modal. */}
-        <button className="vault-btn brand">
-          <Icon name="user-plus" size={16} />
-          Invite members
-        </button>
+        {canInvite && (
+          <button className="vault-btn brand" onClick={onInvite}>
+            <Icon name="user-plus" size={16} />
+            Invite members
+          </button>
+        )}
       </div>
       <table className="vault-table">
         <thead>
@@ -401,9 +463,13 @@ function MembersTab({ members }: { members: VaultMember[] }) {
 
 function TenantsTab({
   tenants,
+  canCreate,
+  onCreate,
   onSwitch,
 }: {
   tenants: VaultTenant[];
+  canCreate: boolean;
+  onCreate: () => void;
   onSwitch: (id: string) => void;
 }) {
   return (
@@ -415,10 +481,12 @@ function TenantsTab({
             Workspaces managed under this organization. Each tenant has its own assets, branding, and members.
           </p>
         </div>
-        <button className="vault-btn brand">
-          <Icon name="plus" size={16} />
-          New tenant
-        </button>
+        {canCreate && (
+          <button className="vault-btn brand" onClick={onCreate}>
+            <Icon name="plus" size={16} />
+            New tenant
+          </button>
+        )}
       </div>
       <table className="vault-table">
         <thead>
