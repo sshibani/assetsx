@@ -218,6 +218,8 @@ export interface BundleDTO {
   title: string;
   description: string | null;
   assetCount: number;
+  /** Up to a few cover thumbnails (first assets' thumb renditions) for the collage. */
+  coverUrls: string[];
   createdAt: string;
   updatedAt: string;
 }

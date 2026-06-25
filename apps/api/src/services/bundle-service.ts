@@ -72,7 +72,10 @@ export class BundleService {
       orderBy: { createdAt: "desc" },
       include: { _count: { select: { items: true } } },
     });
-    return bundles.map((b) => this.toDTO(b, b._count.items));
+    const covers = await this.coverUrlsFor(bundles.map((b) => b.id));
+    return bundles.map((b) =>
+      this.toDTO(b, b._count.items, covers.get(b.id) ?? []),
+    );
   }
 
   /** List the bundles (in the user's account) that contain the given asset. */
@@ -97,7 +100,10 @@ export class BundleService {
       orderBy: { createdAt: "desc" },
       include: { _count: { select: { items: true } } },
     });
-    return bundles.map((b) => this.toDTO(b, b._count.items));
+    const covers = await this.coverUrlsFor(bundles.map((b) => b.id));
+    return bundles.map((b) =>
+      this.toDTO(b, b._count.items, covers.get(b.id) ?? []),
+    );
   }
 
   async create(user: AuthUser, input: CreateBundleInput): Promise<BundleDTO> {
@@ -128,8 +134,18 @@ export class BundleService {
       orderBy: [{ position: "asc" }, { createdAt: "asc" }],
       include: { asset: { include: { renditions: true } } },
     });
+    const coverUrls = items
+      .map((item) => {
+        for (const name of ["thumb", "standard", "large"]) {
+          const r = item.asset.renditions.find((rd) => rd.name === name);
+          if (r) return this.storage.getUrl(r.storageKey);
+        }
+        return null;
+      })
+      .filter((u): u is string => u !== null)
+      .slice(0, BundleService.MAX_COVERS);
     return {
-      ...this.toDTO(bundle, items.length),
+      ...this.toDTO(bundle, items.length, coverUrls),
       items: items.map((item) => this.itemToDTO(item)),
     };
   }
@@ -335,7 +351,59 @@ export class BundleService {
     return user.accountId;
   }
 
-  private toDTO(bundle: Bundle, assetCount: number): BundleDTO {
+  /** Maximum cover thumbnails surfaced per bundle for the collage. */
+  private static readonly MAX_COVERS = 3;
+
+  /**
+   * Resolve up to MAX_COVERS cover thumbnail URLs per bundle. Prefers the
+   * `thumb` rendition, falling back to `standard`/`large`. Returns a map keyed
+   * by bundle id. Done in one query across all bundles to avoid N+1.
+   */
+  private async coverUrlsFor(bundleIds: string[]): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    if (bundleIds.length === 0) return result;
+
+    const items = await this.prisma.bundleAsset.findMany({
+      where: { bundleId: { in: bundleIds } },
+      orderBy: [{ bundleId: "asc" }, { position: "asc" }, { createdAt: "asc" }],
+      include: {
+        asset: {
+          include: {
+            renditions: {
+              where: { name: { in: ["thumb", "standard", "large"] } },
+            },
+          },
+        },
+      },
+    });
+
+    const pickRendition = (renditions: Rendition[]): Rendition | undefined => {
+      for (const name of ["thumb", "standard", "large"]) {
+        const r = renditions.find((rd) => rd.name === name);
+        if (r) return r;
+      }
+      return undefined;
+    };
+
+    for (const item of items) {
+      const list = result.get(item.bundleId) ?? [];
+      if (list.length >= BundleService.MAX_COVERS) continue;
+      const rendition = pickRendition(item.asset.renditions);
+      if (rendition) {
+        list.push(this.storage.getUrl(rendition.storageKey));
+        result.set(item.bundleId, list);
+      } else if (!result.has(item.bundleId)) {
+        result.set(item.bundleId, list);
+      }
+    }
+    return result;
+  }
+
+  private toDTO(
+    bundle: Bundle,
+    assetCount: number,
+    coverUrls: string[] = [],
+  ): BundleDTO {
     return {
       id: bundle.id,
       accountId: bundle.accountId,
@@ -343,6 +411,7 @@ export class BundleService {
       title: bundle.title,
       description: bundle.description,
       assetCount,
+      coverUrls,
       createdAt: bundle.createdAt.toISOString(),
       updatedAt: bundle.updatedAt.toISOString(),
     };
