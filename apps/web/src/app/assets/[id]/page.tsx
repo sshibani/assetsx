@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../../lib/client-context";
+import { useTranslation } from "../../../lib/i18n";
 import type {
   AssetDTO,
   AssetTimelineItemDTO,
@@ -24,6 +25,7 @@ type Tab = "details" | "activity";
 
 export default function AssetDetailPage() {
   const { client, activeAccount, hasPermission } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -99,7 +101,7 @@ export default function AssetDetailPage() {
     return (
       <div className="vault-empty">
         <div className="spinner" />
-        <p>Loading asset…</p>
+        <p>{t("asset.loading")}</p>
       </div>
     );
   }
@@ -117,7 +119,7 @@ export default function AssetDetailPage() {
   return (
     <>
       <div className="vault-topbar">
-        <button className="vault-icon-btn" aria-label="Back" onClick={() => router.push("/")}>
+        <button className="vault-icon-btn" aria-label={t("asset.back")} onClick={() => router.push("/")}>
           <Icon name="arrow-left" size={18} />
         </button>
         <div style={{ minWidth: 0 }}>
@@ -127,23 +129,23 @@ export default function AssetDetailPage() {
           <div className="vault-topbar-title">{v.name}</div>
         </div>
         <div className="vault-topbar-actions">
-          {saved && <span className="vault-badge active">Saved</span>}
+          {saved && <span className="vault-badge active">{t("common.saved")}</span>}
           <button className="vault-btn" onClick={() => setModal("share")}>
             <Icon name="share" size={16} />
-            Share
+            {t("asset.share")}
           </button>
           {canManageBundles && (
             <button className="vault-btn" onClick={() => setModal("addToBundle")}>
               <Icon name="layers" size={16} />
-              Add to bundle
+              {t("asset.addToBundle")}
             </button>
           )}
           <a className="vault-btn brand" href={asset.originalUrl} target="_blank" rel="noreferrer">
             <Icon name="download" size={16} />
-            Download
+            {t("asset.download")}
           </a>
           {canDelete && (
-            <button className="vault-icon-btn" aria-label="More" onClick={() => setModal("delete")}>
+            <button className="vault-icon-btn" aria-label={t("asset.more")} onClick={() => setModal("delete")}>
               <Icon name="more" size={18} />
             </button>
           )}
@@ -184,13 +186,13 @@ export default function AssetDetailPage() {
                 className={`vault-tab${tab === "details" ? " active" : ""}`}
                 onClick={() => setTab("details")}
               >
-                Details
+                {t("asset.tabDetails")}
               </button>
               <button
                 className={`vault-tab${tab === "activity" ? " active" : ""}`}
                 onClick={() => setTab("activity")}
               >
-                Activity
+                {t("asset.tabActivity")}
                 {commentCount > 0 && (
                   <span className="vault-tab-count">{commentCount}</span>
                 )}
@@ -203,25 +205,25 @@ export default function AssetDetailPage() {
               {canUpdate && (
                 <>
                   <div className="vault-field">
-                    <label className="vault-field-label">Title</label>
+                    <label className="vault-field-label">{t("asset.title")}</label>
                     <input
                       className="vault-input"
                       defaultValue={asset.title ?? ""}
-                      placeholder="Untitled"
+                      placeholder={t("asset.titlePlaceholder")}
                       onBlur={(e) => save({ title: e.target.value })}
                     />
                   </div>
                   <div className="vault-field">
-                    <label className="vault-field-label">Description</label>
+                    <label className="vault-field-label">{t("asset.description")}</label>
                     <textarea
                       className="vault-input"
                       defaultValue={asset.description ?? ""}
-                      placeholder="Describe this asset…"
+                      placeholder={t("asset.descriptionPlaceholder")}
                       onBlur={(e) => save({ description: e.target.value })}
                     />
                   </div>
                   <div className="vault-field">
-                    <label className="vault-field-label">Expiry date</label>
+                    <label className="vault-field-label">{t("asset.expiry")}</label>
                     <input
                       className="vault-input"
                       type="date"
@@ -242,11 +244,16 @@ export default function AssetDetailPage() {
                         }}
                       >
                         {new Date(asset.expiresAt).getTime() < Date.now()
-                          ? "Expired"
-                          : "Expires"}{" "}
-                        {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
-                          new Date(asset.expiresAt),
-                        )}
+                          ? t("asset.expired", {
+                              date: new Intl.DateTimeFormat(undefined, {
+                                dateStyle: "medium",
+                              }).format(new Date(asset.expiresAt)),
+                            })
+                          : t("asset.expires", {
+                              date: new Intl.DateTimeFormat(undefined, {
+                                dateStyle: "medium",
+                              }).format(new Date(asset.expiresAt)),
+                            })}
                       </p>
                     )}
                   </div>
@@ -254,39 +261,39 @@ export default function AssetDetailPage() {
                 </>
               )}
 
-              <h3 className="vault-section-label">Details</h3>
+              <h3 className="vault-section-label">{t("asset.details")}</h3>
               <div className="vault-kv">
-                <span className="k">Kind</span>
-                <span className="v" style={{ textTransform: "capitalize" }}>{v.type}</span>
+                <span className="k">{t("asset.kind")}</span>
+                <span className="v">{t(`assetType.${v.type}`)}</span>
               </div>
               {dims && (
                 <div className="vault-kv">
-                  <span className="k">Dimensions</span>
+                  <span className="k">{t("asset.dimensions")}</span>
                   <span className="v">{dims}</span>
                 </div>
               )}
               <div className="vault-kv">
-                <span className="k">Size</span>
+                <span className="k">{t("asset.size")}</span>
                 <span className="v">{formatBytes(asset.sizeBytes)}</span>
               </div>
               <div className="vault-kv">
-                <span className="k">Format</span>
+                <span className="k">{t("asset.format")}</span>
                 <span className="v">{asset.format.toUpperCase()}</span>
               </div>
               {asset.ownerEmail && (
                 <div className="vault-kv">
-                  <span className="k">Uploaded by</span>
+                  <span className="k">{t("asset.uploadedBy")}</span>
                   <span className="v">{asset.ownerEmail}</span>
                 </div>
               )}
               <div className="vault-kv">
-                <span className="k">Modified</span>
+                <span className="k">{t("asset.modified")}</span>
                 <span className="v">{relativeTime(asset.updatedAt)}</span>
               </div>
 
               <div className="vault-divider" />
 
-              <h3 className="vault-section-label">Tags</h3>
+              <h3 className="vault-section-label">{t("asset.tags")}</h3>
               <TagEditor
                 tags={asset.tags}
                 disabled={!canUpdate}
@@ -303,7 +310,7 @@ export default function AssetDetailPage() {
               {canManageBundles && attachedBundles.length > 0 && (
                 <>
                   <div className="vault-divider" />
-                  <h3 className="vault-section-label">Used in bundles</h3>
+                  <h3 className="vault-section-label">{t("asset.usedInBundles")}</h3>
                   {attachedBundles.map((b) => (
                     <Link
                       key={b.id}
@@ -342,7 +349,7 @@ export default function AssetDetailPage() {
 
       {modal === "share" && (
         <ShareModal
-          title="Share asset"
+          title={t("modal.share.titleAsset")}
           tenantName={activeAccount?.account.name ?? "this workspace"}
           shareLink={null}
           onClose={() => setModal(null)}

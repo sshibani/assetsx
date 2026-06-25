@@ -2,6 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import { Icon } from "./Icon";
+import { useTranslation } from "../../lib/i18n";
 
 export function Modal({
   title,
@@ -16,6 +17,7 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const { t } = useTranslation();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -36,7 +38,7 @@ export function Modal({
           <button
             type="button"
             className="vault-icon-btn"
-            aria-label="Close"
+            aria-label={t("common.close")}
             onClick={onClose}
           >
             <Icon name="x" size={18} />

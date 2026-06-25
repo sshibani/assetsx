@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/client-context";
+import { useTranslation } from "../../lib/i18n";
 import type { AccountMembershipDTO } from "../../lib/types";
 import {
   brandColorForAccount,
@@ -30,6 +31,7 @@ export default function SettingsPage() {
     hasPermission,
     isSuperUser,
   } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<Tab>("branding");
@@ -53,14 +55,14 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (!localStorage.getItem("assetx.accessToken")) {
         router.push("/login");
         return;
       }
       setReady(true);
     }, 50);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
@@ -144,7 +146,7 @@ export default function SettingsPage() {
     return (
       <div className="vault-empty">
         <div className="spinner" />
-        <p>Loading settings…</p>
+        <p>{t("settings.loading")}</p>
       </div>
     );
   }
@@ -154,21 +156,21 @@ export default function SettingsPage() {
   return (
     <>
       <div className="vault-view-header" style={{ paddingBottom: 12 }}>
-        <h1 className="vault-view-title">Settings</h1>
+        <h1 className="vault-view-title">{t("settings.title")}</h1>
         <div className="vault-view-sub">
-          Manage how {tenantName} looks and behaves across the workspace.
+          {t("settings.subtitle", { tenant: tenantName })}
         </div>
       </div>
 
       <div className="vault-tabs">
-        {(["branding", "members", "tenants"] as Tab[]).map((t) => (
+        {(["branding", "members", "tenants"] as Tab[]).map((tabKey) => (
           <button
-            key={t}
-            className={`vault-tab${tab === t ? " active" : ""}`}
+            key={tabKey}
+            className={`vault-tab${tab === tabKey ? " active" : ""}`}
             style={{ textTransform: "capitalize" }}
-            onClick={() => setTab(t)}
+            onClick={() => setTab(tabKey)}
           >
-            {t}
+            {t(`settings.tab.${tabKey}`)}
           </button>
         ))}
       </div>
@@ -258,13 +260,14 @@ function BrandingTab({
   onUploadLogo: (file: File) => void | Promise<void>;
   onRemoveLogo: () => void | Promise<void>;
 }) {
+  const { t } = useTranslation();
   const logoInput = useRef<HTMLInputElement>(null);
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 380px", gap: 36, maxWidth: 1100 }}>
       <div className="vault-panel">
-        <h3 className="vault-section-label">Workspace identity</h3>
+        <h3 className="vault-section-label">{t("settings.workspaceIdentity")}</h3>
         <div className="vault-field">
-          <label className="vault-field-label">Workspace name</label>
+          <label className="vault-field-label">{t("settings.workspaceName")}</label>
           <input className="vault-input" defaultValue={tenantName} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -293,7 +296,7 @@ function BrandingTab({
             disabled={!canUpdate || logoBusy}
             onClick={() => logoInput.current?.click()}
           >
-            {logoBusy ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
+            {logoBusy ? t("account.uploadingAvatar") : logoUrl ? t("settings.replaceLogo") : t("settings.uploadLogo")}
           </button>
           {logoUrl && (
             <button
@@ -301,7 +304,7 @@ function BrandingTab({
               disabled={!canUpdate || logoBusy}
               onClick={() => void onRemoveLogo()}
             >
-              Remove
+              {t("common.remove")}
             </button>
           )}
           <input
@@ -319,7 +322,7 @@ function BrandingTab({
 
         <div className="vault-divider" />
 
-        <h3 className="vault-section-label">Brand color</h3>
+        <h3 className="vault-section-label">{t("settings.brandColor")}</h3>
         <div className="vault-swatches">
           {BRAND_SWATCHES.map((s) => {
             const selected = s.value.toLowerCase() === brandColor.toLowerCase();
@@ -350,11 +353,11 @@ function BrandingTab({
             disabled={!canUpdate || saving}
             onClick={() => void onSave(brandColor)}
           >
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? t("common.saving") : t("settings.saveChanges")}
           </button>
           {!canUpdate && (
             <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
-              You need account admin rights to change branding.
+              {t("settings.brandingPermission")}
             </span>
           )}
         </div>
@@ -366,18 +369,18 @@ function BrandingTab({
           <div className="vault-preview-accent" style={{ background: brandColor }} />
           <div style={{ padding: 24 }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: brandColor, marginBottom: 16 }} />
-            <h3 className="vault-display" style={{ margin: "0 0 4px" }}>{tenantName} portal</h3>
+            <h3 className="vault-display" style={{ margin: "0 0 4px" }}>{t("settings.portalPreview", { tenant: tenantName })}</h3>
             <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-              A live preview of your brand color across links and buttons.
+              {t("settings.previewBody")}
             </p>
             <a style={{ color: brandColor, fontWeight: 600 }} href="#" onClick={(e) => e.preventDefault()}>
-              Learn more →
+              {t("settings.learnMore")}
             </a>
             <button
               className="vault-btn-primary block"
               style={{ background: brandColor, marginTop: 16 }}
             >
-              Request access
+              {t("settings.requestAccess")}
             </button>
           </div>
         </div>
@@ -395,29 +398,30 @@ function MembersTab({
   canInvite: boolean;
   onInvite: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div style={{ maxWidth: 1040 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
-          <h2 className="vault-display" style={{ fontSize: 20, margin: 0 }}>Members</h2>
+          <h2 className="vault-display" style={{ fontSize: 20, margin: 0 }}>{t("settings.members")}</h2>
           <p style={{ color: "var(--text-muted)", margin: "4px 0 0" }}>
-            People who can access this workspace.
+            {t("settings.membersBody")}
           </p>
         </div>
         {canInvite && (
           <button className="vault-btn brand" onClick={onInvite}>
             <Icon name="user-plus" size={16} />
-            Invite members
+            {t("settings.inviteMembers")}
           </button>
         )}
       </div>
       <table className="vault-table">
         <thead>
           <tr>
-            <th>Member</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Last active</th>
+            <th>{t("settings.col.member")}</th>
+            <th>{t("settings.col.role")}</th>
+            <th>{t("settings.col.status")}</th>
+            <th>{t("settings.col.lastActive")}</th>
             <th />
           </tr>
         </thead>
@@ -425,7 +429,7 @@ function MembersTab({
           {members.length === 0 ? (
             <tr>
               <td colSpan={5} style={{ color: "var(--text-muted)", textAlign: "center" }}>
-                No members to show.
+                {t("settings.noMembers")}
               </td>
             </tr>
           ) : (
@@ -443,7 +447,7 @@ function MembersTab({
                 <td style={{ color: "var(--text-muted)" }}>{m.role}</td>
                 <td>
                   <span className={`vault-badge ${m.status === "Active" ? "active" : m.status === "Invited" ? "invited" : "neutral"}`}>
-                    {m.status}
+                    {t(`memberStatus.${m.status}`)}
                   </span>
                 </td>
                 <td style={{ color: "var(--text-muted)" }}>{m.lastActive}</td>
@@ -472,68 +476,69 @@ function TenantsTab({
   onCreate: () => void;
   onSwitch: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div style={{ maxWidth: 1040 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
-          <h2 className="vault-display" style={{ fontSize: 20, margin: 0 }}>Tenants</h2>
+          <h2 className="vault-display" style={{ fontSize: 20, margin: 0 }}>{t("settings.tenants")}</h2>
           <p style={{ color: "var(--text-muted)", margin: "4px 0 0" }}>
-            Workspaces managed under this organization. Each tenant has its own assets, branding, and members.
+            {t("settings.tenantsBody")}
           </p>
         </div>
         {canCreate && (
           <button className="vault-btn brand" onClick={onCreate}>
             <Icon name="plus" size={16} />
-            New tenant
+            {t("settings.newTenant")}
           </button>
         )}
       </div>
       <table className="vault-table">
         <thead>
           <tr>
-            <th>Workspace</th>
-            <th>Plan</th>
-            <th>Members</th>
-            <th>Storage</th>
-            <th>Status</th>
+            <th>{t("settings.col.workspace")}</th>
+            <th>{t("settings.col.plan")}</th>
+            <th>{t("settings.col.members")}</th>
+            <th>{t("settings.col.storage")}</th>
+            <th>{t("settings.col.status")}</th>
             <th />
           </tr>
         </thead>
         <tbody>
-          {tenants.map((t) => (
+          {tenants.map((tenant) => (
             <tr
-              key={t.id}
-              className={t.isCurrent ? "selected" : ""}
-              onClick={() => !t.isCurrent && onSwitch(t.id)}
-              style={{ cursor: t.isCurrent ? "default" : "pointer" }}
+              key={tenant.id}
+              className={tenant.isCurrent ? "selected" : ""}
+              onClick={() => !tenant.isCurrent && onSwitch(tenant.id)}
+              style={{ cursor: tenant.isCurrent ? "default" : "pointer" }}
             >
               <td>
                 <div className="vault-row-name">
                   <span
                     className="vault-avatar"
-                    style={{ width: 38, height: 38, borderRadius: 9, background: t.brandColor, color: "#fff", fontFamily: "var(--font-display)" }}
+                    style={{ width: 38, height: 38, borderRadius: 9, background: tenant.brandColor, color: "#fff", fontFamily: "var(--font-display)" }}
                   >
-                    {t.name[0]?.toUpperCase()}
+                    {tenant.name[0]?.toUpperCase()}
                   </span>
                   <span>
                     <div style={{ fontWeight: 600, display: "flex", gap: 8, alignItems: "center" }}>
-                      {t.name}
-                      {t.isCurrent && <span className="vault-badge current">Current</span>}
+                      {tenant.name}
+                      {tenant.isCurrent && <span className="vault-badge current">{t("settings.current")}</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.domain}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{tenant.domain}</div>
                   </span>
                 </div>
               </td>
               <td>
-                <span className={`vault-badge ${t.plan === "Enterprise" ? "plan-enterprise" : "neutral"}`}>
-                  {t.plan}
+                <span className={`vault-badge ${tenant.plan === "Enterprise" ? "plan-enterprise" : "neutral"}`}>
+                  {t(`plan.${tenant.plan}`)}
                 </span>
               </td>
-              <td style={{ color: "var(--text-muted)" }}>{t.memberCount ?? "—"}</td>
-              <td style={{ color: "var(--text-muted)" }}>{t.storageLabel}</td>
+              <td style={{ color: "var(--text-muted)" }}>{tenant.memberCount ?? "—"}</td>
+              <td style={{ color: "var(--text-muted)" }}>{tenant.storageLabel}</td>
               <td>
-                <span className={`vault-badge ${t.status === "Active" ? "active" : "suspended"}`}>
-                  {t.status}
+                <span className={`vault-badge ${tenant.status === "Active" ? "active" : "suspended"}`}>
+                  {t(`tenantStatus.${tenant.status}`)}
                 </span>
               </td>
               <td>

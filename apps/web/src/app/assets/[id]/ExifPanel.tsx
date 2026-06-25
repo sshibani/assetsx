@@ -1,6 +1,7 @@
 "use client";
 
 import type { ImageMetadataDTO } from "../../../lib/types";
+import { useTranslation } from "../../../lib/i18n";
 
 function ExifRow({
   label,
@@ -20,6 +21,7 @@ function ExifRow({
 
 /** Read-only EXIF / camera details, including a GPS map when present. */
 export function ExifPanel({ metadata }: { metadata: ImageMetadataDTO }) {
+  const { t } = useTranslation();
   const m = metadata;
   const captured =
     m.capturedAt &&
@@ -51,27 +53,27 @@ export function ExifPanel({ metadata }: { metadata: ImageMetadataDTO }) {
 
   return (
     <div>
-      <h3 className="vault-section-label">Camera / EXIF details</h3>
-      <ExifRow label="Captured" value={captured || null} />
+      <h3 className="vault-section-label">{t("exif.title")}</h3>
+      <ExifRow label={t("exif.captured")} value={captured || null} />
       <ExifRow
-        label="Camera"
+        label={t("exif.camera")}
         value={[m.cameraMake, m.cameraModel].filter(Boolean).join(" ") || null}
       />
-      <ExifRow label="Lens" value={m.lens} />
-      <ExifRow label="Exposure" value={exposure || null} />
-      <ExifRow label="Software" value={m.software} />
-      <ExifRow label="Color space" value={m.colorSpace} />
-      <ExifRow label="DPI" value={m.dpi} />
-      <ExifRow label="Creator" value={m.creator} />
-      <ExifRow label="Copyright" value={m.copyright} />
+      <ExifRow label={t("exif.lens")} value={m.lens} />
+      <ExifRow label={t("exif.exposure")} value={exposure || null} />
+      <ExifRow label={t("exif.software")} value={m.software} />
+      <ExifRow label={t("exif.colorSpace")} value={m.colorSpace} />
+      <ExifRow label={t("exif.dpi")} value={m.dpi} />
+      <ExifRow label={t("exif.creator")} value={m.creator} />
+      <ExifRow label={t("exif.copyright")} value={m.copyright} />
       {m.keywords && m.keywords.length > 0 && (
-        <ExifRow label="Keywords" value={m.keywords.join(", ")} />
+        <ExifRow label={t("exif.keywords")} value={m.keywords.join(", ")} />
       )}
 
       {gps && (
         <div style={{ marginTop: 12 }}>
           <div className="vault-kv">
-            <span className="k">Location</span>
+            <span className="k">{t("exif.location")}</span>
             <span className="v">
               {gps.lat.toFixed(6)}, {gps.lng.toFixed(6)}
               {gps.altitude !== null ? ` · ${Math.round(gps.altitude)}m` : ""}
@@ -79,7 +81,7 @@ export function ExifPanel({ metadata }: { metadata: ImageMetadataDTO }) {
           </div>
           <iframe
             className="exif-map"
-            title="Capture location"
+            title={t("exif.mapTitle")}
             loading="lazy"
             style={{ width: "100%", height: 200, border: 0, borderRadius: 12, marginTop: 8 }}
             src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${gps.lat},${gps.lng}`}
@@ -90,7 +92,7 @@ export function ExifPanel({ metadata }: { metadata: ImageMetadataDTO }) {
             rel="noreferrer"
             style={{ fontSize: 13 }}
           >
-            View on map
+            {t("exif.viewOnMap")}
           </a>
         </div>
       )}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/client-context";
+import { useTranslation } from "../../lib/i18n";
 import { Icon } from "../../components/ui/Icon";
 import { formatBytes } from "../../lib/vault/format";
 import type { BundleDTO } from "../../lib/types";
@@ -18,6 +19,7 @@ interface QueueItem {
 
 export default function UploadPage() {
   const { client, isAuthenticated, hasPermission } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [drag, setDrag] = useState(false);
@@ -98,7 +100,7 @@ export default function UploadPage() {
     return (
       <div className="vault-empty">
         <div className="spinner" />
-        <p>Loading…</p>
+        <p>{t("common.loading")}</p>
       </div>
     );
   }
@@ -109,9 +111,9 @@ export default function UploadPage() {
     <>
       <div className="vault-view-header">
         <div className="vault-breadcrumb">
-          <Link href="/">All assets</Link> / Upload
+          <Link href="/">{t("nav.allAssets")}</Link> / {t("upload.breadcrumb")}
         </div>
-        <h1 className="vault-view-title">Upload assets</h1>
+        <h1 className="vault-view-title">{t("upload.title")}</h1>
       </div>
 
       <div className="vault-main-scroll">
@@ -134,16 +136,16 @@ export default function UploadPage() {
                 <div className="vault-dropzone-icon">
                   <Icon name="upload" size={26} />
                 </div>
-                <div className="vault-dropzone-title">Drag and drop files here</div>
+                <div className="vault-dropzone-title">{t("upload.dropTitle")}</div>
                 <div className="vault-dropzone-help">
-                  or browse from your device. Supports JPG, PNG, SVG, PDF and DOCX up to 2 GB each.
+                  {t("upload.dropHelp")}
                 </div>
                 <button
                   className="vault-btn"
                   disabled={!canUpload}
                   onClick={() => fileInput.current?.click()}
                 >
-                  Browse files
+                  {t("upload.browse")}
                 </button>
                 <input
                   ref={fileInput}
@@ -158,9 +160,9 @@ export default function UploadPage() {
               {queue.length > 0 && (
                 <div style={{ marginTop: 24 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                    <strong>Uploading · {queue.length} files</strong>
+                    <strong>{t("upload.uploadingFiles", { count: queue.length })}</strong>
                     <span style={{ color: "var(--text-muted)" }}>
-                      {completed} of {queue.length} complete
+                      {t("upload.complete", { done: completed, total: queue.length })}
                     </span>
                   </div>
                   {queue.map((q) => (
@@ -178,9 +180,9 @@ export default function UploadPage() {
                             }}
                           >
                             {q.status === "done"
-                              ? "Done"
+                              ? t("upload.statusDone")
                               : q.status === "error"
-                                ? "Failed"
+                                ? t("upload.statusFailed")
                                 : `${q.progress}%`}
                           </span>
                         </div>
@@ -199,12 +201,12 @@ export default function UploadPage() {
 
             {/* Apply to all */}
             <div className="vault-panel" style={{ alignSelf: "start" }}>
-              <h3 className="vault-section-label">Apply to all</h3>
+              <h3 className="vault-section-label">{t("upload.applyToAll")}</h3>
               <div className="vault-field">
-                <label className="vault-field-label">Bundles</label>
+                <label className="vault-field-label">{t("upload.bundles")}</label>
                 {bundles.length === 0 ? (
                   <p style={{ color: "var(--text-muted)", fontSize: 13, margin: 0 }}>
-                    No bundles yet. <Link href="/bundles">Create one</Link>.
+                    {t("upload.noBundles")} <Link href="/bundles">{t("upload.createOne")}</Link>.
                   </p>
                 ) : (
                   <div
@@ -239,16 +241,15 @@ export default function UploadPage() {
                 )}
                 {selectedBundles.size > 0 && (
                   <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
-                    Uploaded assets will be added to {selectedBundles.size}{" "}
-                    {selectedBundles.size === 1 ? "bundle" : "bundles"}.
+                    {t("upload.willAdd", { count: selectedBundles.size })}
                   </p>
                 )}
               </div>
               <div className="vault-field">
-                <label className="vault-field-label">Tags</label>
+                <label className="vault-field-label">{t("upload.tags")}</label>
                 <input
                   className="vault-input"
-                  placeholder="Add a tag and press Enter"
+                  placeholder={t("upload.tagsPlaceholder")}
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -261,13 +262,13 @@ export default function UploadPage() {
                 />
                 {tags.length > 0 && (
                   <div className="vault-tag-row" style={{ marginTop: 8 }}>
-                    {tags.map((t) => (
-                      <span key={t} className="vault-tag" style={{ background: "var(--brand-tint)", color: "var(--brand)" }}>
-                        {t}
+                    {tags.map((tag) => (
+                      <span key={tag} className="vault-tag" style={{ background: "var(--brand-tint)", color: "var(--brand)" }}>
+                        {tag}
                         <button
                           style={{ marginLeft: 6, border: "none", background: "none", cursor: "pointer", color: "inherit" }}
-                          onClick={() => setTags((cur) => cur.filter((x) => x !== t))}
-                          aria-label={`Remove ${t}`}
+                          onClick={() => setTags((cur) => cur.filter((x) => x !== tag))}
+                          aria-label={t("tags.remove", { tag })}
                         >
                           ×
                         </button>
@@ -278,19 +279,19 @@ export default function UploadPage() {
                 {/* TODO(ASS-45): persist tags on uploaded assets. */}
               </div>
               <div className="vault-field">
-                <label className="vault-field-label">Visibility</label>
+                <label className="vault-field-label">{t("upload.visibility")}</label>
                 <div className="vault-radio-cards">
                   <div
                     className={`vault-radio-card${visibility === "workspace" ? " selected" : ""}`}
                     onClick={() => setVisibility("workspace")}
                   >
-                    Workspace
+                    {t("upload.visibilityWorkspace")}
                   </div>
                   <div
                     className={`vault-radio-card${visibility === "private" ? " selected" : ""}`}
                     onClick={() => setVisibility("private")}
                   >
-                    Private
+                    {t("upload.visibilityPrivate")}
                   </div>
                 </div>
               </div>
@@ -300,8 +301,8 @@ export default function UploadPage() {
                 onClick={() => fileInput.current?.click()}
               >
                 {queue.length > 0
-                  ? `${formatBytes(queue.reduce((s, q) => s + q.sizeBytes, 0))} queued`
-                  : "Select files to publish"}
+                  ? t("upload.queued", { size: formatBytes(queue.reduce((s, q) => s + q.sizeBytes, 0)) })
+                  : t("upload.selectFiles")}
               </button>
             </div>
           </div>

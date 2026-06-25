@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "../../../lib/client-context";
+import { useTranslation } from "../../../lib/i18n";
 import type { AssetDTO, BundleDetailDTO } from "../../../lib/types";
 import { toVaultAsset } from "../../../lib/vault/data";
 import { relativeTime } from "../../../lib/vault/format";
@@ -12,6 +13,7 @@ import { DeleteModal, ShareModal } from "../../../components/vault/modals";
 
 export default function BundleDetailPage() {
   const { client, activeAccount, hasPermission } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -59,7 +61,7 @@ export default function BundleDetailPage() {
       await load();
     } catch (err) {
       const status = (err as { status?: number }).status;
-      setError(status === 409 ? "That asset is already in this bundle." : "Could not add the asset.");
+      setError(status === 409 ? t("bundle.duplicateError") : t("bundle.addError"));
     }
   };
 
@@ -79,7 +81,7 @@ export default function BundleDetailPage() {
     return (
       <div className="vault-empty">
         <div className="spinner" />
-        <p>Loading bundle…</p>
+        <p>{t("bundle.loading")}</p>
       </div>
     );
   }
@@ -117,7 +119,7 @@ export default function BundleDetailPage() {
                 </div>
               )}
               <div className="vault-card-sub" style={{ marginTop: 6 }}>
-                {bundle.assetCount} assets · updated {relativeTime(bundle.updatedAt)}
+                {t("bundle.assetsCount", { count: bundle.assetCount })} · updated {relativeTime(bundle.updatedAt)}
               </div>
             </div>
           </div>
@@ -125,15 +127,15 @@ export default function BundleDetailPage() {
             {canShare && (
               <button className="vault-btn brand" onClick={openShare}>
                 <Icon name="share" size={16} />
-                Share
+                {t("bundle.share")}
               </button>
             )}
             <button className="vault-btn" onClick={() => alert("TODO: download all")}>
               <Icon name="download" size={16} />
-              Download all
+              {t("bundle.downloadAll")}
             </button>
             {canDelete && (
-              <button className="vault-icon-btn" aria-label="Delete bundle" onClick={() => setModal("delete")}>
+              <button className="vault-icon-btn" aria-label={t("bundle.deleteBundle")} onClick={() => setModal("delete")}>
                 <Icon name="trash" size={18} />
               </button>
             )}
@@ -144,11 +146,11 @@ export default function BundleDetailPage() {
       <div className="vault-main-scroll">
         <div className="vault-scroll-body">
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <strong style={{ fontSize: 15 }}>Assets in this bundle</strong>
+            <strong style={{ fontSize: 15 }}>{t("bundle.assetsIn")}</strong>
             {canUpdate && available.length > 0 && (
               <button className="vault-btn" onClick={() => setAdding((v) => !v)}>
                 <Icon name="plus" size={16} />
-                Add assets
+                {t("bundle.addAssets")}
               </button>
             )}
           </div>
@@ -160,7 +162,7 @@ export default function BundleDetailPage() {
                 value={selectedAsset}
                 onChange={(e) => setSelectedAsset(e.target.value)}
               >
-                <option value="">Select an asset…</option>
+                <option value="">{t("bundle.selectAsset")}</option>
                 {available.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.title ?? a.originalName}
@@ -168,7 +170,7 @@ export default function BundleDetailPage() {
                 ))}
               </select>
               <button className="vault-btn brand" onClick={addAsset} disabled={!selectedAsset}>
-                Add
+                {t("common.add")}
               </button>
             </div>
           )}
@@ -176,7 +178,7 @@ export default function BundleDetailPage() {
 
           {bundle.items.length === 0 ? (
             <div className="vault-empty">
-              <p>No assets in this bundle yet.</p>
+              <p>{t("bundle.empty")}</p>
             </div>
           ) : (
             <div className="vault-grid compact">

@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../lib/client-context";
 import { ApiError } from "../../lib/api-client";
+import { useTranslation } from "../../lib/i18n";
 
 export default function SignupPage() {
   const { signup } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
   const [accountName, setAccountName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,12 +57,12 @@ export default function SignupPage() {
           <span className="brand-mark">A</span>
           AssetX
         </div>
-        <p className="auth-sub">Create your account</p>
+        <p className="auth-sub">{t("signup.title")}</p>
 
         <form onSubmit={onSubmit}>
           <div className="field">
             <label className="label" htmlFor="accountName">
-              Account name
+              {t("signup.accountName")}
             </label>
             <input
               id="accountName"
@@ -73,7 +75,7 @@ export default function SignupPage() {
           </div>
           <div className="field">
             <label className="label" htmlFor="email">
-              Email
+              {t("signup.email")}
             </label>
             <input
               id="email"
@@ -87,7 +89,7 @@ export default function SignupPage() {
           </div>
           <div className="field">
             <label className="label" htmlFor="password">
-              Password
+              {t("signup.password")}
             </label>
             <input
               id="password"
@@ -117,12 +119,12 @@ export default function SignupPage() {
           {error && <div className="error-text">{error}</div>}
 
           <button className="btn block" type="submit" disabled={submitting}>
-            {submitting ? "Creating account…" : "Sign up"}
+            {submitting ? t("signup.submitting") : t("signup.submit")}
           </button>
         </form>
 
         <p className="auth-sub" style={{ marginTop: 16 }}>
-          Already have an account? <Link href="/login">Log in</Link>
+          <Link href="/login">{t("signup.toLogin")}</Link>
         </p>
       </div>
     </div>

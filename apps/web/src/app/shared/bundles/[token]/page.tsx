@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "../../../../lib/client-context";
+import { useTranslation } from "../../../../lib/i18n";
 import type { PublicBundleDTO } from "../../../../lib/types";
 
 export default function SharedBundlePage() {
   const { client } = useAuth();
+  const { t } = useTranslation();
   const params = useParams<{ token: string }>();
   const token = params.token;
 
@@ -32,7 +34,7 @@ export default function SharedBundlePage() {
     return (
       <div className="center-state">
         <div className="spinner" />
-        <p>Loading shared bundle...</p>
+        <p>{t("shared.loading")}</p>
       </div>
     );
   }
@@ -40,8 +42,8 @@ export default function SharedBundlePage() {
   if (notFound || !bundle) {
     return (
       <div className="center-state">
-        <h2>Link unavailable</h2>
-        <p>This share link is invalid, has expired, or was revoked.</p>
+        <h2>{t("shared.unavailableTitle")}</h2>
+        <p>{t("shared.unavailableBody")}</p>
       </div>
     );
   }
@@ -65,7 +67,7 @@ export default function SharedBundlePage() {
 
         {bundle.items.length === 0 ? (
           <div className="center-state">
-            <p>This bundle has no assets.</p>
+            <p>{t("shared.empty")}</p>
           </div>
         ) : (
           <div className="grid">

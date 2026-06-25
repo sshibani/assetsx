@@ -6,6 +6,7 @@ import { useAuth } from "../../lib/client-context";
 import { LOCALES, type Locale, type UserDTO } from "../../lib/types";
 import { Icon } from "../../components/ui/Icon";
 import { Avatar } from "../../components/ui/Avatar";
+import { useTranslation } from "../../lib/i18n";
 
 const LOCALE_LABELS: Record<Locale, string> = {
   en: "English",
@@ -15,6 +16,7 @@ const LOCALE_LABELS: Record<Locale, string> = {
 export default function AccountPage() {
   const { client, isAuthenticated, user } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
   const [ready, setReady] = useState(false);
   const [me, setMe] = useState<UserDTO | null>(null);
   const [savingLocale, setSavingLocale] = useState(false);
@@ -29,7 +31,7 @@ export default function AccountPage() {
   const [pwMessage, setPwMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (!localStorage.getItem("assetx.accessToken")) {
         router.push("/login");
         return;
@@ -40,7 +42,7 @@ export default function AccountPage() {
         .then(setMe)
         .catch(() => undefined);
     }, 50);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
@@ -86,18 +88,18 @@ export default function AccountPage() {
     e.preventDefault();
     setPwMessage(null);
     if (newPassword !== confirmPassword) {
-      setPwMessage({ ok: false, text: "New passwords do not match." });
+      setPwMessage({ ok: false, text: t("account.passwordMismatch") });
       return;
     }
     setPwBusy(true);
     try {
       await client.changeMyPassword(currentPassword, newPassword);
-      setPwMessage({ ok: true, text: "Password updated." });
+      setPwMessage({ ok: true, text: t("account.passwordUpdated") });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch {
-      setPwMessage({ ok: false, text: "Could not update password. Check your current password." });
+      setPwMessage({ ok: false, text: t("account.passwordError") });
     } finally {
       setPwBusy(false);
     }
@@ -107,7 +109,7 @@ export default function AccountPage() {
     return (
       <div className="vault-empty">
         <div className="spinner" />
-        <p>Loading…</p>
+        <p>{t("common.loading")}</p>
       </div>
     );
   }
@@ -117,8 +119,8 @@ export default function AccountPage() {
   return (
     <>
       <div className="vault-view-header">
-        <h1 className="vault-view-title">Account settings</h1>
-        <div className="vault-view-sub">Manage your profile and preferences.</div>
+        <h1 className="vault-view-title">{t("account.title")}</h1>
+        <div className="vault-view-sub">{t("account.subtitle")}</div>
       </div>
 
       <div className="vault-main-scroll">
@@ -126,7 +128,7 @@ export default function AccountPage() {
           <div style={{ maxWidth: 640, display: "flex", flexDirection: "column", gap: 24 }}>
             {/* Profile */}
             <div className="vault-panel">
-              <h3 className="vault-section-label">Profile</h3>
+              <h3 className="vault-section-label">{t("account.profile")}</h3>
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -144,11 +146,15 @@ export default function AccountPage() {
                     disabled={avatarBusy}
                     onClick={() => avatarInput.current?.click()}
                   >
-                    {avatarBusy ? "Uploading…" : avatarUrl ? "Replace avatar" : "Upload avatar"}
+                    {avatarBusy
+                      ? t("account.uploadingAvatar")
+                      : avatarUrl
+                        ? t("account.replaceAvatar")
+                        : t("account.uploadAvatar")}
                   </button>
                   {avatarUrl && (
                     <button className="vault-btn" disabled={avatarBusy} onClick={removeAvatar}>
-                      Remove
+                      {t("common.remove")}
                     </button>
                   )}
                   <input
@@ -165,16 +171,16 @@ export default function AccountPage() {
                 </div>
               </div>
               <div className="vault-field" style={{ marginBottom: 0 }}>
-                <label className="vault-field-label">Email</label>
+                <label className="vault-field-label">{t("account.email")}</label>
                 <input className="vault-input" value={current.email} readOnly disabled />
               </div>
             </div>
 
             {/* Preferences */}
             <div className="vault-panel">
-              <h3 className="vault-section-label">Preferences</h3>
+              <h3 className="vault-section-label">{t("account.preferences")}</h3>
               <div className="vault-field" style={{ marginBottom: 0 }}>
-                <label className="vault-field-label">Language</label>
+                <label className="vault-field-label">{t("account.language")}</label>
                 <select
                   className="vault-input"
                   value={current.locale}
@@ -192,10 +198,10 @@ export default function AccountPage() {
 
             {/* Security */}
             <div className="vault-panel">
-              <h3 className="vault-section-label">Reset password</h3>
+              <h3 className="vault-section-label">{t("account.resetPassword")}</h3>
               <form onSubmit={changePassword}>
                 <div className="vault-field">
-                  <label className="vault-field-label">Current password</label>
+                  <label className="vault-field-label">{t("account.currentPassword")}</label>
                   <input
                     className="vault-input"
                     type="password"
@@ -205,7 +211,7 @@ export default function AccountPage() {
                   />
                 </div>
                 <div className="vault-field">
-                  <label className="vault-field-label">New password</label>
+                  <label className="vault-field-label">{t("account.newPassword")}</label>
                   <input
                     className="vault-input"
                     type="password"
@@ -215,7 +221,7 @@ export default function AccountPage() {
                   />
                 </div>
                 <div className="vault-field">
-                  <label className="vault-field-label">Confirm new password</label>
+                  <label className="vault-field-label">{t("account.confirmPassword")}</label>
                   <input
                     className="vault-input"
                     type="password"
@@ -234,7 +240,7 @@ export default function AccountPage() {
                     !confirmPassword
                   }
                 >
-                  {pwBusy ? "Updating…" : "Update password"}
+                  {pwBusy ? t("account.updatingPassword") : t("account.updatePassword")}
                 </button>
                 {pwMessage && (
                   <p
@@ -251,7 +257,7 @@ export default function AccountPage() {
             </div>
 
             <div className="vault-panel">
-              <h3 className="vault-section-label">Session</h3>
+              <h3 className="vault-section-label">{t("account.session")}</h3>
               <button
                 className="vault-btn danger"
                 onClick={() => {
@@ -260,7 +266,7 @@ export default function AccountPage() {
                 }}
               >
                 <Icon name="arrow-left" size={16} />
-                Log out
+                {t("common.logout")}
               </button>
             </div>
           </div>

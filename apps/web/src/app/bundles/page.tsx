@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/client-context";
+import { useTranslation } from "../../lib/i18n";
 import type { BundleDTO } from "../../lib/types";
 import { relativeTime } from "../../lib/vault/format";
 import { Icon } from "../../components/ui/Icon";
@@ -28,14 +29,15 @@ function Collage({ count, covers }: { count: number; covers: string[] }) {
   );
 }
 
-const STATUS_LABEL: Record<string, { dot: string; text: string }> = {
-  private: { dot: "var(--text-faint)", text: "Private" },
-  internal: { dot: "var(--brand)", text: "Shared internally" },
-  external: { dot: "var(--success)", text: "Shared externally" },
+const STATUS_LABEL: Record<string, { dot: string; textKey: "bundles.status.private" | "bundles.status.internal" | "bundles.status.external" }> = {
+  private: { dot: "var(--text-faint)", textKey: "bundles.status.private" },
+  internal: { dot: "var(--brand)", textKey: "bundles.status.internal" },
+  external: { dot: "var(--success)", textKey: "bundles.status.external" },
 };
 
 export default function BundlesPage() {
   const { client, isAuthenticated, activeAccount, hasPermission } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [bundles, setBundles] = useState<BundleDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,15 +67,15 @@ export default function BundlesPage() {
       <div className="vault-view-header">
         <div className="vault-header-row">
           <div>
-            <h1 className="vault-view-title">Bundles</h1>
+            <h1 className="vault-view-title">{t("bundles.title")}</h1>
             <div className="vault-view-sub">
-              Curated sets of assets you can share or hand off as a kit.
+              {t("bundles.subtitle")}
             </div>
           </div>
           {canCreate && (
             <button className="vault-btn brand" onClick={() => setCreating(true)}>
               <Icon name="plus" size={16} />
-              New bundle
+              {t("bundles.new")}
             </button>
           )}
         </div>
@@ -84,12 +86,12 @@ export default function BundlesPage() {
           {loading ? (
             <div className="vault-empty">
               <div className="spinner" />
-              <p>Loading your bundles…</p>
+              <p>{t("bundles.loading")}</p>
             </div>
           ) : bundles.length === 0 ? (
             <div className="vault-empty">
-              <h2>No bundles yet</h2>
-              <p>Create a bundle to group assets into a shareable kit.</p>
+              <h2>{t("bundles.empty.title")}</h2>
+              <p>{t("bundles.empty.body")}</p>
             </div>
           ) : (
             <div className="vault-bundle-grid">
@@ -110,13 +112,13 @@ export default function BundlesPage() {
                     <div className="vault-card-meta">
                       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
                         <span className="vault-dot" style={{ background: status.dot }} />
-                        {status.text}
+                        {t(status.textKey)}
                       </div>
                       <div className="vault-display" style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>
                         {b.title}
                       </div>
                       <div className="vault-card-sub">
-                        {b.assetCount} {b.assetCount === 1 ? "asset" : "assets"} · updated {relativeTime(b.updatedAt)}
+                        {t("bundles.assetsUpdated", { count: b.assetCount, time: relativeTime(b.updatedAt) })}
                       </div>
                     </div>
                   </div>

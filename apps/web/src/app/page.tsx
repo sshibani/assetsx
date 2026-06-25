@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/client-context";
+import { useTranslation } from "../lib/i18n";
 import type { AssetDTO } from "../lib/types";
 import { toVaultAsset } from "../lib/vault/data";
 import type { VaultAsset, VaultAssetType } from "../lib/vault/model";
@@ -14,15 +15,16 @@ import { AddToBundleModal, DeleteModal } from "../components/vault/modals";
 type Filter = "all" | VaultAssetType;
 type Layout = "grid" | "list";
 
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "image", label: "Images" },
-  { key: "document", label: "Documents" },
-  { key: "logo", label: "Logos" },
+const FILTERS: { key: Filter; labelKey: "library.filter.all" | "library.filter.image" | "library.filter.document" | "library.filter.logo" }[] = [
+  { key: "all", labelKey: "library.filter.all" },
+  { key: "image", labelKey: "library.filter.image" },
+  { key: "document", labelKey: "library.filter.document" },
+  { key: "logo", labelKey: "library.filter.logo" },
 ];
 
 export default function LibraryPage() {
   const { client, isAuthenticated, activeAccount, hasPermission } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [assets, setAssets] = useState<VaultAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,15 +92,15 @@ export default function LibraryPage() {
       <div className="vault-view-header">
         <div className="vault-header-row">
           <div>
-            <h1 className="vault-view-title">All assets</h1>
+            <h1 className="vault-view-title">{t("library.title")}</h1>
             <div className="vault-view-sub">
-              {assets.length} {assets.length === 1 ? "asset" : "assets"} · {activeAccount?.account.name}
+              {t("library.subtitle", { count: assets.length, account: activeAccount?.account.name ?? "" })}
             </div>
           </div>
           <div className="vault-search">
             <Icon name="search" size={17} />
             <input
-              placeholder="Search assets, tags, people…"
+              placeholder={t("library.searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -114,7 +116,7 @@ export default function LibraryPage() {
               className={`vault-chip${filter === f.key ? " selected" : ""}`}
               onClick={() => setFilter(f.key)}
             >
-              {f.label}
+              {t(f.labelKey)}
               <span className="vault-chip-count">{counts[f.key]}</span>
             </button>
           ))}
@@ -123,7 +125,7 @@ export default function LibraryPage() {
           <div className="vault-segmented" role="group" aria-label="Layout">
             <button
               className={layout === "grid" ? "active" : ""}
-              aria-label="Grid view"
+              aria-label={t("library.gridView")}
               aria-pressed={layout === "grid"}
               onClick={() => setLayout("grid")}
             >
@@ -131,7 +133,7 @@ export default function LibraryPage() {
             </button>
             <button
               className={layout === "list" ? "active" : ""}
-              aria-label="List view"
+              aria-label={t("library.listView")}
               aria-pressed={layout === "list"}
               onClick={() => setLayout("list")}
             >
@@ -146,12 +148,12 @@ export default function LibraryPage() {
           {loading ? (
             <div className="vault-empty">
               <div className="spinner" />
-              <p>Loading your assets…</p>
+              <p>{t("library.loading")}</p>
             </div>
           ) : visible.length === 0 ? (
             <div className="vault-empty">
-              <h2>No assets found</h2>
-              <p>Upload an image or document, or adjust your filters.</p>
+              <h2>{t("library.empty.title")}</h2>
+              <p>{t("library.empty.body")}</p>
             </div>
           ) : layout === "grid" ? (
             <div className="vault-grid">
@@ -168,11 +170,11 @@ export default function LibraryPage() {
             <table className="vault-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Size</th>
-                  <th>Tags</th>
-                  <th>Updated</th>
+                  <th>{t("library.col.name")}</th>
+                  <th>{t("library.col.type")}</th>
+                  <th>{t("library.col.size")}</th>
+                  <th>{t("library.col.tags")}</th>
+                  <th>{t("library.col.updated")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -206,7 +208,7 @@ export default function LibraryPage() {
                         </div>
                       </td>
                       <td style={{ textTransform: "capitalize", color: "var(--text-muted)" }}>
-                        {a.type}
+                        {t(`assetType.${a.type}`)}
                       </td>
                       <td style={{ color: "var(--text-muted)" }}>{formatBytes(a.sizeBytes)}</td>
                       <td style={{ color: "var(--text-muted)" }}>
@@ -224,24 +226,24 @@ export default function LibraryPage() {
 
       {selected.size > 0 && (
         <div className="vault-action-bar">
-          <span className="count">{selected.size} selected</span>
+          <span className="count">{t("library.selected", { count: selected.size })}</span>
           <span className="divider" />
           <button className="vault-bar-btn brand" onClick={() => setModal("addToBundle")}>
             <Icon name="layers" size={15} />
-            Add to bundle
+            {t("library.addToBundle")}
           </button>
           <button className="vault-bar-btn" onClick={() => alert("TODO: bulk download")}>
             <Icon name="download" size={15} />
-            Download
+            {t("library.download")}
           </button>
           {canDelete && (
             <button className="vault-bar-btn danger" onClick={() => setModal("delete")}>
               <Icon name="trash" size={15} />
-              Delete
+              {t("common.delete")}
             </button>
           )}
           <span className="divider" />
-          <button className="vault-bar-close" aria-label="Clear selection" onClick={clearSelection}>
+          <button className="vault-bar-close" aria-label={t("library.clearSelection")} onClick={clearSelection}>
             <Icon name="x" size={16} />
           </button>
         </div>
