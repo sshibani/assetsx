@@ -310,6 +310,7 @@ export class AuthService {
         email: user.email,
         role: "account_owner",
         status: "active",
+        lastActiveAt: null,
         createdAt: account.createdAt.toISOString(),
         updatedAt: account.updatedAt.toISOString(),
       },
