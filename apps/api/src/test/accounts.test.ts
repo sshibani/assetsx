@@ -228,6 +228,66 @@ describe("account memberships", () => {
   });
 });
 
+describe("account usage", () => {
+  it("returns zero usage and a plan-based quota for an empty account", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/accounts/${owner.accountId}/usage`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().usedBytes).toBe(0);
+    // trial default quota
+    expect(res.json().quotaBytes).toBeGreaterThan(0);
+  });
+
+  it("sums asset + rendition bytes for the account", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const asset = await ctx.prisma.asset.create({
+      data: {
+        accountId: owner.accountId!,
+        ownerId: owner.userId,
+        originalName: "a.png",
+        status: "ready",
+        checksum: "x",
+        format: "png",
+        sizeBytes: 1000,
+      },
+    });
+    await ctx.prisma.rendition.create({
+      data: {
+        assetId: asset.id,
+        name: "thumb",
+        storageKey: "k",
+        width: 1,
+        height: 1,
+        format: "webp",
+        sizeBytes: 250,
+      },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/accounts/${owner.accountId}/usage`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().usedBytes).toBe(1250);
+  });
+
+  it("forbids reading usage for another account", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const other = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/accounts/${owner.accountId}/usage`,
+      headers: { authorization: `Bearer ${other.accessToken}` },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+});
+
 describe("account settings", () => {
   it("returns default settings for an account", async () => {
     const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });

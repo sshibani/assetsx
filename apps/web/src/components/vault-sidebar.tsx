@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../lib/client-context";
 import { isPublicRoute } from "../lib/routes";
-import { stubStorageUsage } from "../lib/vault/data";
-import { initials } from "../lib/vault/model";
+import { toStorageUsage } from "../lib/vault/data";
+import { initials, type VaultStorageUsage } from "../lib/vault/model";
 import { Icon, type IconName } from "./ui/Icon";
 
 interface NavDef {
@@ -33,6 +33,9 @@ export function VaultSidebar() {
     assets: 0,
     bundles: 0,
   });
+  const [storage, setStorage] = useState<VaultStorageUsage | null>(null);
+
+  const accountId = activeAccount?.account.id ?? null;
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -43,15 +46,22 @@ export function VaultSidebar() {
           setCounts({ assets: a.items.length, bundles: b.items.length });
       })
       .catch(() => undefined);
+    if (accountId) {
+      client
+        .getAccountUsage(accountId)
+        .then((u) => {
+          if (!cancelled) setStorage(toStorageUsage(u));
+        })
+        .catch(() => undefined);
+    }
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, activeAccount?.account.id]);
+  }, [isAuthenticated, accountId]);
 
   if (isPublicRoute(pathname) || !isAuthenticated) return null;
 
-  const storage = stubStorageUsage();
   const tenantName = activeAccount?.account.name ?? "Workspace";
   const brand = "var(--brand)";
 
@@ -163,12 +173,12 @@ export function VaultSidebar() {
         <div className="vault-storage">
           <div className="vault-storage-row">
             <span className="label">Storage</span>
-            <span className="value">{storage.label}</span>
+            <span className="value">{storage ? storage.label : "—"}</span>
           </div>
           <div className="vault-storage-track">
             <div
               className="vault-storage-fill"
-              style={{ width: `${Math.round(storage.fraction * 100)}%` }}
+              style={{ width: `${Math.round((storage?.fraction ?? 0) * 100)}%` }}
             />
           </div>
         </div>

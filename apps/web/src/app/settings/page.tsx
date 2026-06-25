@@ -6,6 +6,7 @@ import { useAuth } from "../../lib/client-context";
 import type { AccountMembershipDTO } from "../../lib/types";
 import {
   brandColorForAccount,
+  toStorageUsage,
   toVaultMember,
   toVaultTenant,
 } from "../../lib/vault/data";
@@ -49,6 +50,7 @@ export default function SettingsPage() {
 
   const [savingBrand, setSavingBrand] = useState(false);
   const canUpdateAccount = hasPermission("account:update");
+  const [usageLabel, setUsageLabel] = useState<string>("—");
 
   useEffect(() => {
     if (!activeId) return;
@@ -65,6 +67,10 @@ export default function SettingsPage() {
         .then((r) => setMembers(r.items))
         .catch(() => setMembers([]));
     }
+    client
+      .getAccountUsage(activeId)
+      .then((u) => setUsageLabel(toStorageUsage(u).label))
+      .catch(() => setUsageLabel("—"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, tab]);
 
@@ -131,7 +137,13 @@ export default function SettingsPage() {
           )}
           {tab === "tenants" && (
             <TenantsTab
-              tenants={accounts.map((ctx) => toVaultTenant(ctx, activeId))}
+              tenants={accounts.map((ctx) => {
+                const tenant = toVaultTenant(ctx, activeId);
+                // Usage is only resolvable for the active account today.
+                return tenant.isCurrent
+                  ? { ...tenant, storageLabel: usageLabel }
+                  : tenant;
+              })}
               onSwitch={(tid) => switchAccount(tid)}
             />
           )}

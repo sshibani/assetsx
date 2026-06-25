@@ -2,6 +2,7 @@ export type {
   AccountDTO,
   AccountMembershipDTO,
   AccountSettingsDTO,
+  AccountUsageDTO,
   AccountRole,
   AdminAccountDTO,
   AdminUserDTO,

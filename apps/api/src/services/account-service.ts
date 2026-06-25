@@ -8,12 +8,14 @@ import type {
 import type {
   AccountDTO,
   AccountMembershipDTO,
+  AccountPlan,
   AccountRole,
   AccountSettingsDTO,
+  AccountUsageDTO,
   AdminAccountDTO,
   DateTimeFormat,
 } from "@assetx/shared-types";
-import { isValidHexColor } from "@assetx/shared-types";
+import { isValidHexColor, PLAN_STORAGE_QUOTA_BYTES } from "@assetx/shared-types";
 import type { AuthUser } from "../authorization.js";
 import { hasPermission, isSuperUser } from "../authorization.js";
 import { AssetError } from "./asset-service.js";
@@ -220,6 +222,34 @@ export class AccountService {
       await this.assertNotLastOwner(accountId, membershipId);
     }
     await this.prisma.accountMembership.delete({ where: { id: membershipId } });
+  }
+
+  async getUsage(accountId: string, user: AuthUser): Promise<AccountUsageDTO> {
+    await this.assertAccountPermission(accountId, user, "account:read");
+    const account = await this.prisma.account.findUnique({
+      where: { id: accountId },
+      select: { plan: true },
+    });
+    if (!account) throw new AssetError("Account not found", 404);
+
+    const [assetAgg, renditionAgg] = await Promise.all([
+      this.prisma.asset.aggregate({
+        where: { accountId },
+        _sum: { sizeBytes: true },
+      }),
+      this.prisma.rendition.aggregate({
+        where: { asset: { accountId } },
+        _sum: { sizeBytes: true },
+      }),
+    ]);
+
+    const usedBytes =
+      (assetAgg._sum.sizeBytes ?? 0) + (renditionAgg._sum.sizeBytes ?? 0);
+    const quotaBytes =
+      PLAN_STORAGE_QUOTA_BYTES[account.plan as AccountPlan] ??
+      PLAN_STORAGE_QUOTA_BYTES.trial;
+
+    return { accountId, usedBytes, quotaBytes };
   }
 
   async getSettings(

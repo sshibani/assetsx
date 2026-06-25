@@ -326,6 +326,22 @@ export type AssetTimelineItemDTO =
 export const ACCOUNT_PLANS = ["trial", "team", "business", "enterprise"] as const;
 export type AccountPlan = (typeof ACCOUNT_PLANS)[number];
 
+const GB = 1024 ** 3;
+
+/** Default storage quota (bytes) per plan. */
+export const PLAN_STORAGE_QUOTA_BYTES: Record<AccountPlan, number> = {
+  trial: 5 * GB,
+  team: 50 * GB,
+  business: 100 * GB,
+  enterprise: 1024 * GB,
+};
+
+export interface AccountUsageDTO {
+  accountId: string;
+  usedBytes: number;
+  quotaBytes: number;
+}
+
 export interface AccountDTO {
   id: string;
   name: string;
