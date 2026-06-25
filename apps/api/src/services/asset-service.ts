@@ -181,11 +181,16 @@ export class AssetService {
   async getForUser(id: string, user: AuthUser): Promise<AssetDTO> {
     const asset = await this.prisma.asset.findUnique({
       where: { id },
-      include: { renditions: true, tags: true },
+      include: { renditions: true, tags: true, owner: { select: { email: true } } },
     });
     if (!asset) throw new AssetError("Asset not found", 404);
     this.assertCanAccessAsset(asset, user, "assets:read");
-    return this.toDTO(asset, asset.renditions, asset.tags.map((t) => t.tag));
+    return this.toDTO(
+      asset,
+      asset.renditions,
+      asset.tags.map((t) => t.tag),
+      asset.owner?.email ?? null,
+    );
   }
 
   async updateMetadata(
@@ -499,7 +504,8 @@ export class AssetService {
     asset: Asset,
     renditions: Rendition[],
     tags: string[],
+    ownerEmail: string | null = null,
   ): AssetDTO {
-    return assetToDTO(asset, renditions, this.storage, tags);
+    return assetToDTO(asset, renditions, this.storage, tags, ownerEmail);
   }
 }

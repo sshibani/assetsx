@@ -190,6 +190,7 @@ export interface AssetDTO {
   id: string;
   accountId: string;
   ownerId: string;
+  ownerEmail: string | null;
   originalName: string;
   status: AssetStatus;
   checksum: string;
