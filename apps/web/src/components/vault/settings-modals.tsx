@@ -3,13 +3,8 @@
 import { useState } from "react";
 import { Modal } from "../ui/Modal";
 import { useAuth } from "../../lib/client-context";
+import { useTranslation } from "../../lib/i18n";
 import { ACCOUNT_ROLES, type AccountRole } from "@assetx/shared-types";
-
-const ROLE_LABEL: Record<AccountRole, string> = {
-  account_owner: "Owner",
-  account_editor: "Editor",
-  account_viewer: "Viewer",
-};
 
 /** Invite a member to the active account (owner/super-admin). */
 export function InviteMemberModal({
@@ -24,6 +19,7 @@ export function InviteMemberModal({
   onInvited?: () => void;
 }) {
   const { client } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AccountRole>("account_viewer");
   const [busy, setBusy] = useState(false);
@@ -35,13 +31,13 @@ export function InviteMemberModal({
 
   return (
     <Modal
-      title="Invite member"
+      title={t("inviteModal.title")}
       width={460}
       onClose={onClose}
       footer={
         <>
           <button className="vault-btn" onClick={onClose} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             className="vault-btn brand"
@@ -54,19 +50,19 @@ export function InviteMemberModal({
                 onInvited?.();
                 onClose();
               } catch {
-                setError("Could not invite this member.");
+                setError(t("inviteModal.error"));
               } finally {
                 setBusy(false);
               }
             }}
           >
-            {busy ? "Inviting…" : "Send invite"}
+            {busy ? t("inviteModal.sending") : t("inviteModal.send")}
           </button>
         </>
       }
     >
       <div className="vault-field">
-        <label className="vault-field-label">Email</label>
+        <label className="vault-field-label">{t("inviteModal.email")}</label>
         <input
           className="vault-input"
           type="email"
@@ -76,7 +72,7 @@ export function InviteMemberModal({
         />
       </div>
       <div className="vault-field" style={{ marginBottom: 0 }}>
-        <label className="vault-field-label">Role</label>
+        <label className="vault-field-label">{t("inviteModal.role")}</label>
         <select
           className="vault-input"
           value={role}
@@ -84,7 +80,7 @@ export function InviteMemberModal({
         >
           {roles.map((r) => (
             <option key={r} value={r}>
-              {ROLE_LABEL[r]}
+              {t(`role.${r}`)}
             </option>
           ))}
         </select>
@@ -113,6 +109,7 @@ export function CreateTenantModal({
   onCreated?: () => void;
 }) {
   const { client } = useAuth();
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
@@ -123,13 +120,13 @@ export function CreateTenantModal({
 
   return (
     <Modal
-      title="New tenant"
+      title={t("tenantModal.title")}
       width={460}
       onClose={onClose}
       footer={
         <>
           <button className="vault-btn" onClick={onClose} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             className="vault-btn brand"
@@ -142,19 +139,19 @@ export function CreateTenantModal({
                 onCreated?.();
                 onClose();
               } catch {
-                setError("Could not create the tenant (slug may be taken).");
+                setError(t("tenantModal.error"));
               } finally {
                 setBusy(false);
               }
             }}
           >
-            {busy ? "Creating…" : "Create tenant"}
+            {busy ? t("common.creating") : t("tenantModal.create")}
           </button>
         </>
       }
     >
       <div className="vault-field">
-        <label className="vault-field-label">Workspace name</label>
+        <label className="vault-field-label">{t("tenantModal.name")}</label>
         <input
           className="vault-input"
           placeholder="Acme Inc."
@@ -163,7 +160,7 @@ export function CreateTenantModal({
         />
       </div>
       <div className="vault-field" style={{ marginBottom: 0 }}>
-        <label className="vault-field-label">Slug</label>
+        <label className="vault-field-label">{t("tenantModal.slug")}</label>
         <input
           className="vault-input"
           placeholder="acme"
@@ -174,7 +171,7 @@ export function CreateTenantModal({
           }}
         />
         <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-          Lowercase letters, numbers and hyphens. Used in URLs.
+          {t("tenantModal.slugHint")}
         </p>
       </div>
       {error && (

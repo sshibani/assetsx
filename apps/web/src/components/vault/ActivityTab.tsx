@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AssetTimelineItemDTO } from "../../lib/types";
 import { relativeTime } from "../../lib/vault/format";
+import { useTranslation } from "../../lib/i18n";
 import { Avatar } from "../ui/Avatar";
 import { Icon } from "../ui/Icon";
 
@@ -17,6 +18,7 @@ export function ActivityTab({
   posting: boolean;
   onComment: (body: string) => void | Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState("");
 
   const submit = async () => {
@@ -31,7 +33,7 @@ export function ActivityTab({
       <div className="vault-timeline">
         {items.length === 0 ? (
           <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
-            No activity yet.
+            {t("activity.none")}
           </p>
         ) : (
           <>
@@ -57,7 +59,7 @@ export function ActivityTab({
                 );
               }
               const a = item.activity;
-              const actor = a.actorEmail?.replace(/@.*/, "") ?? "System";
+              const actor = a.actorEmail?.replace(/@.*/, "") ?? t("activity.system");
               return (
                 <div key={`a-${item.id}`} className="vault-timeline-entry">
                   <Avatar seed={a.actorEmail ?? "system"} size={32} />
@@ -84,7 +86,7 @@ export function ActivityTab({
             <textarea
               className="vault-composer-input"
               rows={2}
-              placeholder="Add a comment…"
+              placeholder={t("activity.commentPlaceholder")}
               value={draft}
               maxLength={2000}
               onChange={(e) => setDraft(e.target.value)}
@@ -97,7 +99,7 @@ export function ActivityTab({
                 onClick={submit}
               >
                 <Icon name="share" size={14} />
-                {posting ? "Posting…" : "Comment"}
+                {posting ? t("activity.posting") : t("activity.comment")}
               </button>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Modal } from "../ui/Modal";
 import { Icon } from "../ui/Icon";
 import { useAuth } from "../../lib/client-context";
+import { useTranslation } from "../../lib/i18n";
 import type { BundleDTO } from "../../lib/types";
 
 /** Delete confirmation. onConfirm performs the real mutation. */
@@ -18,17 +19,18 @@ export function DeleteModal({
   onClose: () => void;
   onConfirm: () => Promise<void> | void;
 }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
-  const label = count === 1 ? noun : `${noun}s`;
+  const nounLabel = t(noun === "bundle" ? "noun.bundle" : "noun.asset");
   return (
     <Modal
-      title={`Delete ${count} ${label}?`}
+      title={t("modal.delete.title", { count, noun: nounLabel })}
       width={420}
       onClose={onClose}
       footer={
         <>
           <button className="vault-btn" onClick={onClose} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             className="vault-btn danger"
@@ -43,7 +45,7 @@ export function DeleteModal({
               }
             }}
           >
-            {busy ? "Deleting…" : "Delete"}
+            {busy ? t("common.deleting") : t("common.delete")}
           </button>
         </>
       }
@@ -52,8 +54,7 @@ export function DeleteModal({
         <Icon name="trash" size={22} />
       </div>
       <p style={{ textAlign: "center", color: "var(--text-muted)", margin: 0 }}>
-        This can&apos;t be undone. The {label} will be removed from every bundle
-        and from shared links.
+        {t("modal.delete.body", { noun: nounLabel })}
       </p>
     </Modal>
   );
@@ -68,6 +69,7 @@ export function CreateBundleModal({
   onCreated?: (bundle: BundleDTO) => void;
 }) {
   const { client } = useAuth();
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<"workspace" | "private">("workspace");
@@ -75,13 +77,13 @@ export function CreateBundleModal({
 
   return (
     <Modal
-      title="Create bundle"
+      title={t("modal.createBundle.title")}
       width={500}
       onClose={onClose}
       footer={
         <>
           <button className="vault-btn" onClick={onClose} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             className="vault-btn brand"
@@ -101,47 +103,47 @@ export function CreateBundleModal({
               }
             }}
           >
-            {busy ? "Creating…" : "Create bundle"}
+            {busy ? t("common.creating") : t("modal.createBundle.submit")}
           </button>
         </>
       }
     >
       <div className="vault-field">
-        <label className="vault-field-label">Name</label>
+        <label className="vault-field-label">{t("modal.createBundle.name")}</label>
         <input
           className="vault-input"
           value={name}
           maxLength={255}
-          placeholder="e.g. Q3 launch kit"
+          placeholder={t("modal.createBundle.namePlaceholder")}
           onChange={(e) => setName(e.target.value)}
         />
       </div>
       <div className="vault-field">
-        <label className="vault-field-label">Description</label>
+        <label className="vault-field-label">{t("modal.createBundle.description")}</label>
         <textarea
           className="vault-input"
           value={description}
           maxLength={5000}
-          placeholder="What's in this bundle?"
+          placeholder={t("modal.createBundle.descriptionPlaceholder")}
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
       <div className="vault-field" style={{ marginBottom: 0 }}>
-        <label className="vault-field-label">Visibility</label>
+        <label className="vault-field-label">{t("modal.createBundle.visibility")}</label>
         <div className="vault-radio-cards">
           <div
             className={`vault-radio-card${visibility === "workspace" ? " selected" : ""}`}
             onClick={() => setVisibility("workspace")}
           >
-            <strong>Workspace</strong>
-            <div style={{ color: "var(--text-muted)" }}>Everyone in the workspace</div>
+            <strong>{t("modal.createBundle.workspace")}</strong>
+            <div style={{ color: "var(--text-muted)" }}>{t("modal.createBundle.workspaceHint")}</div>
           </div>
           <div
             className={`vault-radio-card${visibility === "private" ? " selected" : ""}`}
             onClick={() => setVisibility("private")}
           >
-            <strong>Private</strong>
-            <div style={{ color: "var(--text-muted)" }}>Only you</div>
+            <strong>{t("modal.createBundle.private")}</strong>
+            <div style={{ color: "var(--text-muted)" }}>{t("modal.createBundle.privateHint")}</div>
           </div>
         </div>
       </div>
@@ -162,6 +164,7 @@ export function AddToBundleModal({
   onDone?: () => void;
 }) {
   const { client } = useAuth();
+  const { t } = useTranslation();
   const [bundles, setBundles] = useState<BundleDTO[]>([]);
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -194,22 +197,22 @@ export function AddToBundleModal({
   return (
     <>
       <Modal
-        title="Add to bundle"
+        title={t("modal.addToBundle.title")}
         width={480}
         onClose={onClose}
         footer={
           <button className="vault-btn" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </button>
         }
       >
         <p style={{ color: "var(--text-muted)", marginTop: 0 }}>
-          {selectedCount} selected · choose a destination
+          {t("modal.addToBundle.subtitle", { count: selectedCount })}
         </p>
         <div className="vault-search" style={{ width: "100%", marginBottom: 12 }}>
           <Icon name="search" size={16} />
           <input
-            placeholder="Search bundles…"
+            placeholder={t("modal.addToBundle.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -225,7 +228,7 @@ export function AddToBundleModal({
           >
             <Icon name="plus" size={18} />
           </span>
-          <strong>Create new bundle</strong>
+          <strong>{t("modal.addToBundle.createNew")}</strong>
         </button>
         {filtered.map((b) => (
           <div key={b.id} className="vault-list-row">
@@ -238,7 +241,7 @@ export function AddToBundleModal({
             <span style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600 }}>{b.title}</div>
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                {b.assetCount} {b.assetCount === 1 ? "asset" : "assets"}
+                {t("bundle.assetsCount", { count: b.assetCount })}
               </div>
             </span>
             <button
@@ -278,6 +281,7 @@ export function ShareModal({
   shareLink: string | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [invite, setInvite] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -288,20 +292,20 @@ export function ShareModal({
       onClose={onClose}
       footer={
         <button className="vault-btn brand" onClick={onClose}>
-          Done
+          {t("common.done")}
         </button>
       }
     >
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <input
           className="vault-input"
-          placeholder="Invite by email"
+          placeholder={t("modal.share.invitePlaceholder")}
           value={invite}
           onChange={(e) => setInvite(e.target.value)}
         />
         {/* TODO(ASS-50): wire per-asset people invitations. */}
         <button className="vault-btn brand" disabled title="Coming soon">
-          Invite
+          {t("modal.share.invite")}
         </button>
       </div>
       <div className="vault-list-row">
@@ -309,13 +313,13 @@ export function ShareModal({
           <Icon name="globe" size={16} />
         </span>
         <span style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600 }}>Anyone with the link · Can view</div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>in {tenantName}</div>
+          <div style={{ fontWeight: 600 }}>{t("modal.share.anyoneWithLink")}</div>
+          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t("modal.share.inWorkspace", { tenant: tenantName })}</div>
         </span>
       </div>
       <div className="vault-divider" />
       <div style={{ display: "flex", gap: 8 }}>
-        <input className="vault-input" readOnly value={shareLink ?? "No link yet"} />
+        <input className="vault-input" readOnly value={shareLink ?? t("modal.share.noLink")} />
         <button
           className="vault-btn brand"
           disabled={!shareLink}
@@ -328,7 +332,7 @@ export function ShareModal({
           }}
         >
           <Icon name="copy" size={16} />
-          {copied ? "Copied" : "Copy link"}
+          {copied ? t("modal.share.copied") : t("modal.share.copyLink")}
         </button>
       </div>
     </Modal>

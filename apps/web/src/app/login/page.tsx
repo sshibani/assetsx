@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "../../lib/client-context";
 import { ApiError } from "../../lib/api-client";
+import { useTranslation } from "../../lib/i18n";
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState("admin@assetx.local");
   const [password, setPassword] = useState("");
@@ -23,13 +25,11 @@ export default function LoginPage() {
       router.push("/");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        setError("Invalid credentials");
+        setError(t("login.error"));
       } else if (err instanceof ApiError) {
-        setError(`Login failed (HTTP ${err.status})`);
+        setError(`${t("login.error")} (HTTP ${err.status})`);
       } else {
-        setError(
-          err instanceof Error ? `Login error: ${err.message}` : "Login error",
-        );
+        setError(t("login.error"));
       }
     } finally {
       setSubmitting(false);
@@ -43,12 +43,12 @@ export default function LoginPage() {
           <span className="brand-mark">A</span>
           AssetX
         </div>
-        <p className="auth-sub">Sign in to manage your image assets</p>
+        <p className="auth-sub">{t("login.title")}</p>
 
         <form onSubmit={onSubmit}>
           <div className="field">
             <label className="label" htmlFor="email">
-              Email
+              {t("login.email")}
             </label>
             <input
               id="email"
@@ -62,7 +62,7 @@ export default function LoginPage() {
           </div>
           <div className="field">
             <label className="label" htmlFor="password">
-              Password
+              {t("login.password")}
             </label>
             <input
               id="password"
@@ -78,12 +78,12 @@ export default function LoginPage() {
           {error && <div className="error-text">{error}</div>}
 
           <button className="btn block" type="submit" disabled={submitting}>
-            {submitting ? "Signing in…" : "Log in"}
+            {submitting ? t("login.submitting") : t("login.submit")}
           </button>
         </form>
 
         <p className="auth-sub" style={{ marginTop: 16 }}>
-          New to AssetX? <Link href="/signup">Create an account</Link>
+          <Link href="/signup">{t("login.toSignup")}</Link>
         </p>
       </div>
     </div>

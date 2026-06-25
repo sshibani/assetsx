@@ -7,6 +7,7 @@ import { useAuth } from "../lib/client-context";
 import { isPublicRoute } from "../lib/routes";
 import { toStorageUsage } from "../lib/vault/data";
 import { initials, type VaultStorageUsage } from "../lib/vault/model";
+import { useTranslation } from "../lib/i18n";
 import { Icon, type IconName } from "./ui/Icon";
 
 interface NavDef {
@@ -18,6 +19,7 @@ interface NavDef {
 }
 
 export function VaultSidebar() {
+  const { t } = useTranslation();
   const pathname = usePathname() ?? "/";
   const {
     client,
@@ -85,14 +87,14 @@ export function VaultSidebar() {
   const nav: NavDef[] = [
     {
       href: "/",
-      label: "All assets",
+      label: t("nav.allAssets"),
       icon: "grid",
       match: (p) => p === "/" || p.startsWith("/assets"),
       count: counts.assets,
     },
     {
       href: "/bundles",
-      label: "Bundles",
+      label: t("nav.bundles"),
       icon: "layers",
       match: (p) => p.startsWith("/bundles"),
       count: counts.bundles,
@@ -130,7 +132,7 @@ export function VaultSidebar() {
           </span>
           <span className="vault-tenant-meta">
             <span className="vault-tenant-name">{tenantName}</span>
-            <span className="vault-tenant-sub">Business · Workspace</span>
+            <span className="vault-tenant-sub">{t("nav.tenantSubtitle")}</span>
           </span>
           <Icon name="chevron-down" size={16} />
         </button>
@@ -164,13 +166,13 @@ export function VaultSidebar() {
       <div className="vault-upload-cta">
         <Link href="/upload" className="vault-btn-primary block">
           <Icon name="upload" size={16} />
-          Upload assets
+          {t("nav.uploadAssets")}
         </Link>
       </div>
 
       {/* Nav */}
       <nav className="vault-nav">
-        <div className="vault-nav-label">Library</div>
+        <div className="vault-nav-label">{t("nav.library")}</div>
         {nav.map((item) => {
           const active = item.match(pathname);
           return (
@@ -188,7 +190,7 @@ export function VaultSidebar() {
             </Link>
           );
         })}
-        <div className="vault-nav-label">Workspace</div>
+        <div className="vault-nav-label">{t("nav.workspace")}</div>
         <Link
           href="/settings"
           className={`vault-nav-item${
@@ -196,7 +198,7 @@ export function VaultSidebar() {
           }`}
         >
           <Icon name="settings" size={18} />
-          <span>Settings</span>
+          <span>{t("nav.settings")}</span>
         </Link>
       </nav>
 
@@ -204,7 +206,7 @@ export function VaultSidebar() {
       <div className="vault-sidebar-bottom">
         <div className="vault-storage">
           <div className="vault-storage-row">
-            <span className="label">Storage</span>
+            <span className="label">{t("nav.storage")}</span>
             <span className="value">{storage ? storage.label : "—"}</span>
           </div>
           <div className="vault-storage-track">
@@ -217,7 +219,7 @@ export function VaultSidebar() {
         <Link
           href="/account"
           className={`vault-user${pathname.startsWith("/account") ? " active" : ""}`}
-          title="Account settings"
+          title={t("nav.accountSettings")}
         >
           {user?.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -239,7 +241,7 @@ export function VaultSidebar() {
               {user?.email?.replace(/@.*/, "") ?? "User"}
             </span>
             <span className="vault-user-role">
-              {user?.globalRole === "super_user" ? "Platform admin" : "Member"}
+              {user?.globalRole === "super_user" ? t("nav.platformAdmin") : t("nav.member")}
             </span>
           </span>
           <Icon name="settings" size={16} />

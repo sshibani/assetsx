@@ -6,6 +6,7 @@ import {
   RENDITION_ORDER,
   renditionLabel,
 } from "../../lib/vault/format";
+import { useTranslation } from "../../lib/i18n";
 
 /** Order renditions largest → smallest by the known pipeline order. */
 export function orderRenditions(renditions: RenditionDTO[]): RenditionDTO[] {
@@ -26,6 +27,7 @@ export function RenditionRail({
   thumbUrl: string | null;
   onSelect: (rendition: RenditionDTO) => void;
 }) {
+  const { t } = useTranslation();
   const ordered = orderRenditions(renditions);
   if (ordered.length === 0) return null;
 
@@ -34,10 +36,13 @@ export function RenditionRail({
   return (
     <div className="vault-rendition-rail">
       <div className="vault-rendition-caption">
-        <span className="vault-rendition-label">Renditions</span>
+        <span className="vault-rendition-label">{t("asset.renditions")}</span>
         <span className="vault-rendition-showing">
-          Showing <b>{renditionLabel(active.name)}</b> · {active.width} ×{" "}
-          {active.height} · {formatBytes(active.sizeBytes)}
+          {t("asset.showing", {
+            label: renditionLabel(active.name),
+            dims: `${active.width} × ${active.height}`,
+            size: formatBytes(active.sizeBytes),
+          })}
         </span>
       </div>
       <div className="vault-rendition-thumbs">

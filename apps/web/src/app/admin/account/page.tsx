@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AppFooter } from "../../AppFooter";
 import { useAuth } from "../../../lib/client-context";
 import { ApiError } from "../../../lib/api-client";
+import { useTranslation } from "../../../lib/i18n";
 import { ACCOUNT_ROLES, DATE_TIME_FORMATS } from "@assetx/shared-types";
 import type {
   AccountMembershipDTO,
@@ -17,6 +18,7 @@ import type {
 export default function AccountAdminPage() {
   const { activeAccount, hasPermission, isAuthenticated, client } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
   const accountId = activeAccount?.account.id ?? null;
 
   const canManageMembers = hasPermission("members:manage");
@@ -50,14 +52,14 @@ export default function AccountAdminPage() {
   }, [accountId, client]);
 
   useEffect(() => {
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (!localStorage.getItem("assetx.accessToken")) {
         router.push("/login");
         return;
       }
       load();
     }, 50);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, accountId]);
 
@@ -93,7 +95,7 @@ export default function AccountAdminPage() {
     return (
       <>
         <main className="container">
-          <p>No active account.</p>
+          <p>{t("admin.account.noActive")}</p>
         </main>
         <AppFooter />
       </>
@@ -104,9 +106,9 @@ export default function AccountAdminPage() {
     return (
       <>
         <main className="container">
-          <h2>Account administration</h2>
-          <p>You do not have permission to administer this account.</p>
-          <Link href="/">Back to gallery</Link>
+          <h2>{t("admin.account.title")}</h2>
+          <p>{t("admin.account.noPermission")}</p>
+          <Link href="/">{t("admin.backToGallery")}</Link>
         </main>
         <AppFooter />
       </>
@@ -123,17 +125,17 @@ export default function AccountAdminPage() {
       <header className="appbar">
         <div className="brand">
           <span className="brand-mark">A</span>
-          AssetX · Account admin
+          {t("admin.account.brand")}
         </div>
         <div className="appbar-actions">
           <Link className="btn secondary" href="/">
-            Back to gallery
+            {t("admin.backToGallery")}
           </Link>
         </div>
       </header>
 
       <main className="container">
-        <h2>{activeAccount?.account.name} — Administration</h2>
+        <h2>{t("admin.account.heading", { name: activeAccount?.account.name ?? "" })}</h2>
         {error && <div className="error-text">{error}</div>}
         {loading ? (
           <div className="center-state">
@@ -142,14 +144,14 @@ export default function AccountAdminPage() {
         ) : (
           <>
             <section style={{ marginTop: 24 }}>
-              <h3>Members</h3>
+              <h3>{t("admin.account.members")}</h3>
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    {canManageMembers && <th>Actions</th>}
+                    <th>{t("admin.col.email")}</th>
+                    <th>{t("admin.col.role")}</th>
+                    <th>{t("admin.col.status")}</th>
+                    {canManageMembers && <th>{t("admin.col.actions")}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -177,19 +179,19 @@ export default function AccountAdminPage() {
                             >
                               {roleOptions(m.role).map((r) => (
                                 <option key={r} value={r}>
-                                  {r}
+                                  {t(`role.${r}`)}
                                 </option>
                               ))}
                             </select>
                           ) : (
-                            m.role
+                            t(`role.${m.role}`)
                           )}
                         </td>
                         <td>
                           <span
                             className={`badge ${m.status === "active" ? "ready" : "failed"}`}
                           >
-                            {m.status}
+                            {t(`status.${m.status}`)}
                           </span>
                         </td>
                         {canManageMembers && (
@@ -211,7 +213,7 @@ export default function AccountAdminPage() {
                                     )
                                   }
                                 >
-                                  {m.status === "active" ? "Disable" : "Enable"}
+                                  {m.status === "active" ? t("admin.disable") : t("admin.enable")}
                                 </button>{" "}
                                 <button
                                   className="btn secondary"
@@ -222,7 +224,7 @@ export default function AccountAdminPage() {
                                     )
                                   }
                                 >
-                                  Remove
+                                  {t("common.remove")}
                                 </button>
                               </>
                             )}
@@ -253,12 +255,12 @@ export default function AccountAdminPage() {
                   >
                     {roleOptions("account_viewer").map((r) => (
                       <option key={r} value={r}>
-                        {r}
+                        {t(`role.${r}`)}
                       </option>
                     ))}
                   </select>
                   <button className="btn" type="submit">
-                    Add member
+                    {t("admin.account.addMember")}
                   </button>
                 </form>
               )}
@@ -266,10 +268,10 @@ export default function AccountAdminPage() {
 
             {canUpdate && settings && (
               <section style={{ marginTop: 32 }}>
-                <h3>Settings</h3>
+                <h3>{t("admin.account.settings")}</h3>
                 <div className="field">
                   <label className="label" htmlFor="dtf">
-                    Date/time format
+                    {t("admin.account.dateFormat")}
                   </label>
                   <select
                     id="dtf"
@@ -294,7 +296,7 @@ export default function AccountAdminPage() {
                 </div>
                 <div className="field">
                   <label className="label" htmlFor="tz">
-                    Timezone (IANA)
+                    {t("admin.account.timezone")}
                   </label>
                   <input
                     id="tz"
