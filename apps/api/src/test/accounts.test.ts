@@ -194,6 +194,35 @@ describe("account settings", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().dateTimeFormat).toBe("ISO");
     expect(res.json().timezone).toBe("UTC");
+    expect(res.json().brandColor).toBe("#343ced");
+    expect(res.json().typeface).toBeNull();
+  });
+
+  it("lets an owner update branding (brandColor + typeface)", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/accounts/${owner.accountId}/settings`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+      payload: { brandColor: "#15803D", typeface: "SF Pro Display" },
+    });
+    expect(res.statusCode).toBe(200);
+    // normalized to lowercase hex
+    expect(res.json().brandColor).toBe("#15803d");
+    expect(res.json().typeface).toBe("SF Pro Display");
+  });
+
+  it("rejects an invalid brandColor", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    for (const bad of ["red", "#12", "343ced", "#1234zz"]) {
+      const res = await app.inject({
+        method: "PUT",
+        url: `/api/accounts/${owner.accountId}/settings`,
+        headers: { authorization: `Bearer ${owner.accessToken}` },
+        payload: { brandColor: bad },
+      });
+      expect(res.statusCode).toBe(400);
+    }
   });
 
   it("auto-creates settings if missing on read", async () => {

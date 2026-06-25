@@ -350,8 +350,18 @@ export interface AccountSettingsDTO {
   accountId: string;
   dateTimeFormat: DateTimeFormat;
   timezone: string;
+  brandColor: string;
+  logoUrl: string | null;
+  typeface: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Matches a 3- or 6-digit hex color, e.g. #fff or #343ced. */
+export const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+export function isValidHexColor(value: string): boolean {
+  return HEX_COLOR_PATTERN.test(value);
 }
 
 export interface AuthAccountContext {
