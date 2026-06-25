@@ -1,18 +1,38 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useAuth } from "../../lib/client-context";
 import type { BundleDTO } from "../../lib/types";
+import { relativeTime } from "../../lib/vault/format";
+import { Icon } from "../../components/ui/Icon";
+import { CreateBundleModal } from "../../components/vault/modals";
+
+function Collage({ count }: { count: number }) {
+  // Cover images aren't on the list DTO; render neutral tiles. (ASS-?)
+  const extra = Math.max(count - 3, 0);
+  return (
+    <div className="vault-collage">
+      <div className="vault-collage-tile" />
+      <div className="vault-collage-tile" />
+      <div className="vault-collage-tile">
+        {extra > 0 && <div className="vault-collage-more">+{extra}</div>}
+      </div>
+    </div>
+  );
+}
+
+const STATUS_LABEL: Record<string, { dot: string; text: string }> = {
+  private: { dot: "var(--text-faint)", text: "Private" },
+  internal: { dot: "var(--brand)", text: "Shared internally" },
+  external: { dot: "var(--success)", text: "Shared externally" },
+};
 
 export default function BundlesPage() {
   const { client, isAuthenticated, activeAccount, hasPermission } = useAuth();
   const router = useRouter();
   const [bundles, setBundles] = useState<BundleDTO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [creating, setCreating] = useState(false);
   const canCreate = hasPermission("bundles:create");
 
@@ -34,101 +54,76 @@ export default function BundlesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, activeAccount?.account.id]);
 
-  const onCreate = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!canCreate || creating) return;
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    setCreating(true);
-    try {
-      await client.createBundle({
-        title: trimmed,
-        description: description.trim() || undefined,
-      });
-      setTitle("");
-      setDescription("");
-      await refresh();
-    } finally {
-      setCreating(false);
-    }
-  };
-
   return (
     <>
-      <header className="appbar">
-        <Link href="/" className="brand" style={{ fontSize: 16 }}>
-          <span aria-hidden>{"<-"}</span> Back to gallery
-        </Link>
-        <div className="appbar-actions">
-          <span className="brand" style={{ fontSize: 16 }}>
-            Bundles
-          </span>
+      <div className="vault-view-header">
+        <div className="vault-header-row">
+          <div>
+            <h1 className="vault-view-title">Bundles</h1>
+            <div className="vault-view-sub">
+              Curated sets of assets you can share or hand off as a kit.
+            </div>
+          </div>
+          {canCreate && (
+            <button className="vault-btn brand" onClick={() => setCreating(true)}>
+              <Icon name="plus" size={16} />
+              New bundle
+            </button>
+          )}
         </div>
-      </header>
+      </div>
 
-      <main className="container">
-        {canCreate && (
-          <div className="panel" style={{ marginBottom: 24 }}>
-            <h3 className="section-title">Create a bundle</h3>
-            <form
-              onSubmit={onCreate}
-              style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
-            >
-              <input
-                className="input"
-                placeholder="Bundle title"
-                value={title}
-                maxLength={255}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <input
-                className="input"
-                placeholder="Description (optional)"
-                value={description}
-                maxLength={5000}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-              <button
-                className="btn"
-                type="submit"
-                disabled={creating || title.trim().length === 0}
-              >
-                {creating ? "Creating..." : "Create bundle"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="center-state">
-            <div className="spinner" />
-            <p>Loading your bundles…</p>
-          </div>
-        ) : bundles.length === 0 ? (
-          <div className="center-state">
-            <h2>No bundles yet</h2>
-            <p>Create a bundle to group assets into a collection.</p>
-          </div>
-        ) : (
-          <div className="grid">
-            {bundles.map((b) => (
-              <Link key={b.id} href={`/bundles/${b.id}`} className="card">
-                <div className="thumb placeholder">
-                  {b.assetCount} {b.assetCount === 1 ? "asset" : "assets"}
-                </div>
-                <div className="meta">
-                  <div className="title">{b.title}</div>
-                  {b.description && (
-                    <div style={{ color: "var(--text-muted)", fontSize: 13 }}>
-                      {b.description}
+      <div className="vault-main-scroll">
+        <div className="vault-scroll-body">
+          {loading ? (
+            <div className="vault-empty">
+              <div className="spinner" />
+              <p>Loading your bundles…</p>
+            </div>
+          ) : bundles.length === 0 ? (
+            <div className="vault-empty">
+              <h2>No bundles yet</h2>
+              <p>Create a bundle to group assets into a shareable kit.</p>
+            </div>
+          ) : (
+            <div className="vault-bundle-grid">
+              {bundles.map((b) => {
+                const status = STATUS_LABEL.private!;
+                return (
+                  <div
+                    key={b.id}
+                    className="vault-card"
+                    onClick={() => router.push(`/bundles/${b.id}`)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") router.push(`/bundles/${b.id}`);
+                    }}
+                  >
+                    <Collage count={b.assetCount} />
+                    <div className="vault-card-meta">
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
+                        <span className="vault-dot" style={{ background: status.dot }} />
+                        {status.text}
+                      </div>
+                      <div className="vault-display" style={{ fontSize: 16, fontWeight: 600, marginTop: 4 }}>
+                        {b.title}
+                      </div>
+                      <div className="vault-card-sub">
+                        {b.assetCount} {b.assetCount === 1 ? "asset" : "assets"} · updated {relativeTime(b.updatedAt)}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </main>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {creating && (
+        <CreateBundleModal onClose={() => setCreating(false)} onCreated={() => refresh()} />
+      )}
     </>
   );
 }

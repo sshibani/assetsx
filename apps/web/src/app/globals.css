@@ -1,24 +1,51 @@
 :root {
-  --bg: #f4f6fb;
+  /* Per-tenant brand accent (multi-tenant theming). Overridden at runtime by
+     the active tenant's color via the app shell. Defaults to Glean Blue. */
+  --brand: #343ced;
+  --brand-hover: #131bd4;
+  --brand-tint: rgba(52, 60, 237, 0.12);
+  --brand-selected: rgb(245, 245, 254);
+
+  /* Glean Design System (light) tokens */
+  --bg: #f7f8fa;
   --surface: #ffffff;
-  --surface-2: #f0f2f8;
-  --border: #e2e6ef;
-  --text: #1b2030;
-  --text-muted: #6b7488;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: #eef0ff;
-  --danger: #dc2626;
-  --danger-soft: #fde8e8;
+  --surface-2: #eef0f3;
+  --surface-3: #d9dce2;
+  --border: #e7e8ed;
+  --border-strong: #c9cbd2;
+  --text: #1f2024;
+  --text-muted: #565a64;
+  --text-faint: #9499a3;
+
+  /* Aliases kept so existing screens inherit the new accent */
+  --primary: var(--brand);
+  --primary-hover: var(--brand-hover);
+  --primary-soft: var(--brand-tint);
+
+  --danger: #cc0000;
+  --danger-hover: #a30000;
+  --danger-fg: #b91c1c;
+  --danger-soft: #fdecea;
   --success: #15803d;
-  --success-soft: #dcfce7;
-  --warning: #b45309;
-  --warning-soft: #fef3c7;
+  --success-bar: #22c55e;
+  --success-soft: #e9f7ef;
+  --warning: #92670a;
+  --warning-soft: #fff8e5;
+
   --radius: 16px;
-  --radius-sm: 10px;
-  --shadow-sm: 0 1px 2px rgba(20, 25, 46, 0.06), 0 1px 3px rgba(20, 25, 46, 0.04);
-  --shadow: 0 4px 16px rgba(20, 25, 46, 0.08);
-  --shadow-lg: 0 12px 40px rgba(20, 25, 46, 0.12);
+  --radius-sm: 12px;
+  --radius-card: 16px;
+  --radius-modal: 18px;
+  --radius-pill: 9999px;
+  --radius-btn: 24px;
+
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow: 0 8px 8px -4px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 8px 24px -6px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 32px 32px -8px rgba(0, 0, 0, 0.08), 0 0 32px -8px rgba(0, 0, 0, 0.12);
+
+  --font-display: "SF Pro Display", "SF Pro", "DM Sans", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 * {
@@ -32,8 +59,8 @@ body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
+  font-family: "SF Pro Text", "SF Pro", "DM Sans", -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -886,5 +913,1179 @@ h3 {
   }
   .appbar-actions .btn-label {
     display: none;
+  }
+}
+
+/* ======================================================================
+   Vault DAM — Glean redesign
+   ====================================================================== */
+
+.vault-display {
+  font-family: var(--font-display);
+}
+
+/* ---------- App shell ---------- */
+.vault-shell {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.vault-sidebar {
+  width: 268px;
+  flex: none;
+  height: 100%;
+  background: #ffffff;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.vault-main {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.vault-main-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ---------- Sidebar: tenant switcher ---------- */
+.vault-tenant {
+  padding: 16px;
+}
+
+.vault-tenant-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.1s ease-out;
+  text-align: left;
+}
+.vault-tenant-btn:hover {
+  background: var(--bg);
+}
+
+.vault-tenant-tile {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.vault-tenant-meta {
+  flex: 1;
+  min-width: 0;
+}
+.vault-tenant-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vault-tenant-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.vault-tenant-menu {
+  position: absolute;
+  z-index: 50;
+  margin: 4px 16px 0;
+  width: 236px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+}
+.vault-tenant-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+.vault-tenant-menu button:hover {
+  background: var(--bg);
+}
+
+/* ---------- Sidebar: upload CTA ---------- */
+.vault-upload-cta {
+  padding: 0 16px 14px;
+}
+.vault-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--radius-btn);
+  background: var(--brand);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.08s ease-out;
+}
+.vault-btn-primary:hover {
+  background: var(--brand-hover);
+}
+.vault-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.vault-btn-primary.block,
+.vault-upload-cta .vault-btn-primary {
+  width: 100%;
+}
+
+/* ---------- Sidebar: nav ---------- */
+.vault-nav {
+  padding: 4px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vault-nav-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  padding: 12px 12px 4px;
+}
+.vault-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s ease-out;
+}
+.vault-nav-item:hover {
+  background: var(--bg);
+}
+.vault-nav-item .vault-nav-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.vault-nav-item.active {
+  background: var(--brand-tint);
+  color: var(--brand);
+  font-weight: 600;
+}
+.vault-nav-item.active .vault-nav-count {
+  color: var(--brand);
+}
+
+/* ---------- Sidebar: bottom block ---------- */
+.vault-sidebar-bottom {
+  margin-top: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.vault-storage {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+.vault-storage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.vault-storage-row .label {
+  font-size: 12px;
+  font-weight: 600;
+}
+.vault-storage-row .value {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.vault-storage-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.vault-storage-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--brand);
+}
+.vault-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vault-user-meta {
+  min-width: 0;
+}
+.vault-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vault-user-role {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.vault-avatar {
+  flex: none;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  color: #1f2024;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+/* ---------- Buttons & chips ---------- */
+.vault-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.08s ease-out, border-color 0.08s ease-out;
+}
+.vault-btn:hover {
+  background: var(--bg);
+}
+.vault-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.vault-btn.brand {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.vault-btn.brand:hover {
+  background: var(--brand-hover);
+}
+.vault-btn.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.vault-btn.danger:hover {
+  background: var(--danger-hover);
+}
+
+.vault-icon-btn {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.08s ease-out;
+}
+.vault-icon-btn.bare {
+  border: none;
+}
+.vault-icon-btn:hover {
+  background: var(--bg);
+}
+
+.vault-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.08s ease-out;
+}
+.vault-chip:hover {
+  background: var(--bg);
+}
+.vault-chip .vault-chip-count {
+  color: var(--text-faint);
+}
+.vault-chip.selected {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+.vault-chip.selected .vault-chip-count {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ---------- View header ---------- */
+.vault-view-header {
+  padding: 26px 36px;
+}
+.vault-view-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+.vault-view-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.vault-breadcrumb {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.vault-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.vault-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  width: 268px;
+  max-width: 100%;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-btn);
+  background: #fff;
+  color: var(--text-faint);
+}
+.vault-search input {
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 14px;
+  color: var(--text);
+  width: 100%;
+}
+
+.vault-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 36px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.vault-filter-left {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.vault-filter-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vault-segmented {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 9999px;
+  padding: 2px;
+  gap: 2px;
+}
+.vault-segmented button {
+  width: 30px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  border-radius: 9999px;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.vault-segmented button.active {
+  background: var(--brand-tint);
+  color: var(--brand);
+}
+
+/* ---------- Library grid ---------- */
+.vault-scroll-body {
+  padding: 24px 36px 48px;
+}
+.vault-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 20px;
+}
+.vault-grid.compact {
+  grid-template-columns: repeat(auto-fill, minmax(188px, 1fr));
+}
+
+.vault-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow 0.12s ease-out, transform 0.12s ease-out;
+}
+.vault-card:hover {
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+.vault-card.selected {
+  box-shadow: 0 0 0 2px var(--brand), 0 8px 24px -6px rgba(0, 0, 0, 0.15);
+}
+
+.vault-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.vault-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.vault-thumb-logo {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: -1px;
+  color: var(--text);
+}
+.vault-thumb-doc {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.vault-doc-page {
+  width: 84px;
+  height: 104px;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.vault-doc-bar {
+  height: 8px;
+  border-radius: 3px;
+  background: var(--brand);
+  width: 70%;
+}
+.vault-doc-line {
+  height: 5px;
+  border-radius: 3px;
+  background: #d9dce2;
+}
+
+.vault-format-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.vault-select-box {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 23px;
+  height: 23px;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  background: rgba(31, 32, 36, 0.25);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.1s ease-out;
+}
+.vault-card:hover .vault-select-box,
+.vault-select-box.checked {
+  opacity: 1;
+}
+.vault-select-box.checked {
+  background: var(--brand);
+  border-color: #fff;
+}
+
+.vault-card-meta {
+  padding: 13px 14px 14px;
+}
+.vault-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vault-card-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.vault-tag-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.vault-tag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+
+/* ---------- Library list view ---------- */
+.vault-table {
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+.vault-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.vault-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  vertical-align: middle;
+}
+.vault-table tr:last-child td {
+  border-bottom: none;
+}
+.vault-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s ease-out;
+}
+.vault-table tbody tr:hover {
+  background: var(--bg);
+}
+.vault-table tbody tr.selected {
+  background: var(--brand-selected);
+}
+.vault-row-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.vault-row-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--surface-2);
+  flex: none;
+}
+.vault-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-strong);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: #fff;
+}
+.vault-check.checked {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+/* ---------- Floating multi-select bar ---------- */
+.vault-action-bar {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #1f2024;
+  color: #fff;
+  border-radius: 9999px;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.4);
+  padding: 8px 8px 8px 18px;
+}
+.vault-action-bar .count {
+  font-size: 13px;
+  font-weight: 600;
+}
+.vault-action-bar .divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.2);
+}
+.vault-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.vault-bar-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.vault-bar-btn.brand {
+  background: var(--brand);
+}
+.vault-bar-btn.brand:hover {
+  background: var(--brand-hover);
+}
+.vault-bar-btn.danger {
+  color: #ff9b9b;
+}
+.vault-bar-btn.danger:hover {
+  background: rgba(204, 0, 0, 0.25);
+}
+.vault-bar-close {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ---------- Panels / sections ---------- */
+.vault-panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+}
+.vault-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+.vault-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  font-size: 13px;
+}
+.vault-kv .k {
+  color: var(--text-muted);
+}
+.vault-kv .v {
+  color: var(--text);
+  text-align: right;
+}
+.vault-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+/* ---------- Status badges ---------- */
+.vault-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.vault-badge.active {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.vault-badge.invited {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.vault-badge.suspended {
+  background: var(--danger-soft);
+  color: var(--danger-fg);
+}
+.vault-badge.neutral {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.vault-badge.plan-enterprise {
+  background: rgba(106, 64, 184, 0.12);
+  color: #6a40b8;
+}
+.vault-badge.current {
+  background: var(--brand-tint);
+  color: var(--brand);
+}
+.vault-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex: none;
+}
+
+/* ---------- Detail layouts ---------- */
+.vault-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 384px;
+  height: 100%;
+  min-height: 0;
+}
+.vault-preview-pane {
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  padding: 48px;
+  overflow: auto;
+}
+.vault-preview-pane img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.vault-meta-panel {
+  background: #fff;
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 24px 24px 40px;
+}
+.vault-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+.vault-topbar-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vault-topbar-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ---------- Upload ---------- */
+.vault-two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 28px;
+}
+.vault-dropzone {
+  border: 2px dashed var(--border-strong);
+  border-radius: 18px;
+  background: #fff;
+  padding: 48px 24px;
+  text-align: center;
+  transition: background 0.1s ease-out, border-color 0.1s ease-out;
+}
+.vault-dropzone.drag {
+  border-color: var(--brand);
+  background: var(--bg);
+}
+.vault-dropzone-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 14px;
+  border-radius: 9999px;
+  background: var(--brand-tint);
+  color: var(--brand);
+  display: grid;
+  place-items: center;
+}
+.vault-dropzone-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+}
+.vault-dropzone-help {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 6px 0 16px;
+}
+.vault-queue-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  margin-top: 10px;
+}
+.vault-queue-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  flex: none;
+}
+.vault-progress {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin-top: 6px;
+}
+.vault-progress-fill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 9999px;
+  transition: width 0.2s ease-out;
+}
+.vault-progress-fill.done {
+  background: var(--success-bar);
+}
+
+/* ---------- Bundles ---------- */
+.vault-bundle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+.vault-collage {
+  height: 150px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2px;
+  background: var(--surface-2);
+}
+.vault-collage > div:first-child {
+  grid-row: span 2;
+}
+.vault-collage-tile {
+  position: relative;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.vault-collage-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vault-collage-more {
+  position: absolute;
+  inset: 0;
+  background: rgba(31, 32, 36, 0.55);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 600;
+}
+.vault-avatar-stack {
+  display: flex;
+}
+.vault-avatar-stack > * {
+  border: 2px solid #fff;
+  margin-left: -7px;
+}
+.vault-avatar-stack > *:first-child {
+  margin-left: 0;
+}
+
+/* ---------- Settings tabs ---------- */
+.vault-tabs {
+  display: flex;
+  gap: 26px;
+  border-bottom: 1px solid var(--border);
+  padding: 0 36px;
+}
+.vault-tab {
+  padding: 12px 0;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+}
+.vault-tab.active {
+  color: var(--brand);
+  font-weight: 600;
+  border-bottom-color: var(--brand);
+}
+
+.vault-swatches {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.vault-swatch {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  border: none;
+}
+.vault-swatch.selected {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px currentColor;
+}
+
+.vault-preview-card {
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.vault-preview-accent {
+  height: 6px;
+}
+
+/* ---------- Forms ---------- */
+.vault-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  font-size: 14px;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+}
+.vault-input:focus {
+  border-color: var(--brand);
+}
+textarea.vault-input {
+  height: auto;
+  padding: 10px 14px;
+  resize: vertical;
+  min-height: 80px;
+}
+.vault-field {
+  margin-bottom: 16px;
+}
+.vault-field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.vault-radio-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.vault-radio-card {
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.vault-radio-card.selected {
+  border-color: var(--brand);
+  background: var(--brand-tint);
+}
+
+/* ---------- Modals ---------- */
+.vault-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(31, 32, 36, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.vault-modal {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: var(--shadow-xl);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  width: 500px;
+  max-width: 100%;
+}
+.vault-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+}
+.vault-modal-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+.vault-modal-body {
+  padding: 0 24px 20px;
+  overflow-y: auto;
+}
+.vault-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 18px 18px;
+}
+.vault-list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.vault-list-row + .vault-list-row {
+  border-top: 1px solid var(--border);
+}
+.vault-delete-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 9999px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 14px;
+}
+
+.vault-empty {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vault-card,
+  .vault-btn,
+  .vault-btn-primary,
+  .vault-nav-item,
+  .vault-progress-fill {
+    transition: none;
+  }
+  .vault-card:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  .vault-detail {
+    grid-template-columns: 1fr;
+  }
+  .vault-meta-panel {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  .vault-two-col {
+    grid-template-columns: 1fr;
   }
 }

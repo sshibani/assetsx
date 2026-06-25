@@ -2,25 +2,38 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useAuth } from "../../lib/client-context";
+import type { AccountMembershipDTO } from "../../lib/types";
+import {
+  brandColorForAccount,
+  toVaultMember,
+  toVaultTenant,
+} from "../../lib/vault/data";
+import { BRAND_SWATCHES, type VaultMember, type VaultTenant } from "../../lib/vault/model";
+import { Icon } from "../../components/ui/Icon";
+import { Avatar } from "../../components/ui/Avatar";
+
+type Tab = "branding" | "members" | "tenants";
 
 export default function SettingsPage() {
   const {
+    client,
     isAuthenticated,
-    user,
     accounts,
     activeAccount,
     switchAccount,
-    isSuperUser,
     hasPermission,
-    logout,
   } = useAuth();
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [tab, setTab] = useState<Tab>("branding");
+  const [members, setMembers] = useState<AccountMembershipDTO[]>([]);
 
-  const canAdminAccount =
-    hasPermission("members:manage") || hasPermission("account:update");
+  const activeId = activeAccount?.account.id ?? null;
+  const [brandColor, setBrandColor] = useState<string>(
+    activeId ? brandColorForAccount(activeId) : "#343ced",
+  );
+  const canManageMembers = hasPermission("members:read") || hasPermission("members:manage");
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -34,84 +47,299 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (!activeId) return;
+    setBrandColor(brandColorForAccount(activeId));
+    if (canManageMembers) {
+      client
+        .listMembers(activeId)
+        .then((r) => setMembers(r.items))
+        .catch(() => setMembers([]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, tab]);
+
   if (!ready) {
     return (
-      <div className="center-state">
+      <div className="vault-empty">
         <div className="spinner" />
-        <p>Loading settings...</p>
+        <p>Loading settings…</p>
       </div>
     );
   }
 
+  const tenantName = activeAccount?.account.name ?? "this workspace";
+
   return (
     <>
-      <header className="appbar">
-        <div className="brand">Settings</div>
-      </header>
+      <div className="vault-view-header" style={{ paddingBottom: 12 }}>
+        <h1 className="vault-view-title">Settings</h1>
+        <div className="vault-view-sub">
+          Manage how {tenantName} looks and behaves across the workspace.
+        </div>
+      </div>
 
-      <main className="container">
-        <div className="detail-grid">
-          <div>
-            <div className="panel">
-              <h3 className="section-title">Account</h3>
-              <div className="field">
-                <label className="label">Signed in as</label>
-                <div className="readonly-value" aria-readonly="true">
-                  {user?.email ?? "—"}
-                </div>
-              </div>
-              {accounts.length > 0 && (
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label className="label">Active account</label>
-                  <select
-                    className="input"
-                    value={activeAccount?.account.id ?? ""}
-                    onChange={(e) => switchAccount(e.target.value)}
-                    aria-label="Active account"
-                  >
-                    {accounts.map((ctx) => (
-                      <option key={ctx.account.id} value={ctx.account.id}>
-                        {ctx.account.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          </div>
+      <div className="vault-tabs">
+        {(["branding", "members", "tenants"] as Tab[]).map((t) => (
+          <button
+            key={t}
+            className={`vault-tab${tab === t ? " active" : ""}`}
+            style={{ textTransform: "capitalize" }}
+            onClick={() => setTab(t)}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
 
-          <div>
-            <div className="panel">
-              <h3 className="section-title">Administration</h3>
-              {!canAdminAccount && !isSuperUser ? (
-                <p className="dim" style={{ color: "var(--text-muted)" }}>
-                  You have no administrative settings.
-                </p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {canAdminAccount && (
-                    <Link className="btn secondary block" href="/admin/account">
-                      Account administration
-                    </Link>
-                  )}
-                  {isSuperUser && (
-                    <Link className="btn secondary block" href="/admin/platform">
-                      Platform administration
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
+      <div className="vault-main-scroll">
+        <div className="vault-scroll-body">
+          {tab === "branding" && (
+            <BrandingTab
+              tenantName={tenantName}
+              brandColor={brandColor}
+              onSelect={setBrandColor}
+            />
+          )}
+          {tab === "members" && (
+            <MembersTab members={members.map(toVaultMember)} />
+          )}
+          {tab === "tenants" && (
+            <TenantsTab
+              tenants={accounts.map((ctx) => toVaultTenant(ctx, activeId))}
+              onSwitch={(tid) => switchAccount(tid)}
+            />
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
 
-            <div className="panel" style={{ marginTop: 20 }}>
-              <h3 className="section-title">Session</h3>
-              <button className="btn danger block" onClick={logout}>
-                Log out
+function BrandingTab({
+  tenantName,
+  brandColor,
+  onSelect,
+}: {
+  tenantName: string;
+  brandColor: string;
+  onSelect: (c: string) => void;
+}) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 380px", gap: 36, maxWidth: 1100 }}>
+      <div className="vault-panel">
+        <h3 className="vault-section-label">Workspace identity</h3>
+        <div className="vault-field">
+          <label className="vault-field-label">Workspace name</label>
+          <input className="vault-input" defaultValue={tenantName} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 60, height: 60, borderRadius: 14, background: brandColor }} />
+          <button className="vault-btn">Replace logo</button>
+        </div>
+        {/* TODO(ASS-48): persist logo. */}
+
+        <div className="vault-divider" />
+
+        <h3 className="vault-section-label">Brand color</h3>
+        <div className="vault-swatches">
+          {BRAND_SWATCHES.map((s) => {
+            const selected = s.value.toLowerCase() === brandColor.toLowerCase();
+            return (
+              <button
+                key={s.value}
+                className={`vault-swatch${selected ? " selected" : ""}`}
+                style={{ background: s.value, color: s.value }}
+                aria-label={s.name}
+                aria-pressed={selected}
+                onClick={() => onSelect(s.value)}
+              >
+                {selected && <Icon name="check" size={18} strokeWidth={3} className="" />}
               </button>
-            </div>
+            );
+          })}
+        </div>
+        {/* TODO(ASS-48): persist brand color via account settings. */}
+
+        <div className="vault-divider" />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="vault-btn brand" disabled title="Persisted via ASS-48">
+            Save changes
+          </button>
+          <button className="vault-btn">Reset</button>
+        </div>
+      </div>
+
+      {/* Live preview */}
+      <div style={{ position: "sticky", top: 0, alignSelf: "start" }}>
+        <div className="vault-preview-card">
+          <div className="vault-preview-accent" style={{ background: brandColor }} />
+          <div style={{ padding: 24 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: brandColor, marginBottom: 16 }} />
+            <h3 className="vault-display" style={{ margin: "0 0 4px" }}>{tenantName} portal</h3>
+            <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
+              A live preview of your brand color across links and buttons.
+            </p>
+            <a style={{ color: brandColor, fontWeight: 600 }} href="#" onClick={(e) => e.preventDefault()}>
+              Learn more →
+            </a>
+            <button
+              className="vault-btn-primary block"
+              style={{ background: brandColor, marginTop: 16 }}
+            >
+              Request access
+            </button>
           </div>
         </div>
-      </main>
-    </>
+      </div>
+    </div>
+  );
+}
+
+function MembersTab({ members }: { members: VaultMember[] }) {
+  return (
+    <div style={{ maxWidth: 1040 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <h2 className="vault-display" style={{ fontSize: 20, margin: 0 }}>Members</h2>
+          <p style={{ color: "var(--text-muted)", margin: "4px 0 0" }}>
+            People who can access this workspace.
+          </p>
+        </div>
+        {/* TODO: wire invite to addMember modal. */}
+        <button className="vault-btn brand">
+          <Icon name="user-plus" size={16} />
+          Invite members
+        </button>
+      </div>
+      <table className="vault-table">
+        <thead>
+          <tr>
+            <th>Member</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Last active</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {members.length === 0 ? (
+            <tr>
+              <td colSpan={5} style={{ color: "var(--text-muted)", textAlign: "center" }}>
+                No members to show.
+              </td>
+            </tr>
+          ) : (
+            members.map((m) => (
+              <tr key={m.id} style={{ cursor: "default" }}>
+                <td>
+                  <div className="vault-row-name">
+                    <Avatar seed={m.email} size={36} color={m.avatarColor} />
+                    <span>
+                      <div style={{ fontWeight: 500 }}>{m.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{m.email}</div>
+                    </span>
+                  </div>
+                </td>
+                <td style={{ color: "var(--text-muted)" }}>{m.role}</td>
+                <td>
+                  <span className={`vault-badge ${m.status === "Active" ? "active" : m.status === "Invited" ? "invited" : "neutral"}`}>
+                    {m.status}
+                  </span>
+                </td>
+                <td style={{ color: "var(--text-muted)" }}>{m.lastActive}</td>
+                <td>
+                  <button className="vault-icon-btn bare" aria-label="More">
+                    <Icon name="more" size={18} />
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TenantsTab({
+  tenants,
+  onSwitch,
+}: {
+  tenants: VaultTenant[];
+  onSwitch: (id: string) => void;
+}) {
+  return (
+    <div style={{ maxWidth: 1040 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <h2 className="vault-display" style={{ fontSize: 20, margin: 0 }}>Tenants</h2>
+          <p style={{ color: "var(--text-muted)", margin: "4px 0 0" }}>
+            Workspaces managed under this organization. Each tenant has its own assets, branding, and members.
+          </p>
+        </div>
+        <button className="vault-btn brand">
+          <Icon name="plus" size={16} />
+          New tenant
+        </button>
+      </div>
+      <table className="vault-table">
+        <thead>
+          <tr>
+            <th>Workspace</th>
+            <th>Plan</th>
+            <th>Members</th>
+            <th>Storage</th>
+            <th>Status</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {tenants.map((t) => (
+            <tr
+              key={t.id}
+              className={t.isCurrent ? "selected" : ""}
+              onClick={() => !t.isCurrent && onSwitch(t.id)}
+              style={{ cursor: t.isCurrent ? "default" : "pointer" }}
+            >
+              <td>
+                <div className="vault-row-name">
+                  <span
+                    className="vault-avatar"
+                    style={{ width: 38, height: 38, borderRadius: 9, background: t.brandColor, color: "#fff", fontFamily: "var(--font-display)" }}
+                  >
+                    {t.name[0]?.toUpperCase()}
+                  </span>
+                  <span>
+                    <div style={{ fontWeight: 600, display: "flex", gap: 8, alignItems: "center" }}>
+                      {t.name}
+                      {t.isCurrent && <span className="vault-badge current">Current</span>}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{t.domain}</div>
+                  </span>
+                </div>
+              </td>
+              <td>
+                <span className={`vault-badge ${t.plan === "Enterprise" ? "plan-enterprise" : "neutral"}`}>
+                  {t.plan}
+                </span>
+              </td>
+              <td style={{ color: "var(--text-muted)" }}>{t.memberCount ?? "—"}</td>
+              <td style={{ color: "var(--text-muted)" }}>{t.storageLabel}</td>
+              <td>
+                <span className={`vault-badge ${t.status === "Active" ? "active" : "suspended"}`}>
+                  {t.status}
+                </span>
+              </td>
+              <td>
+                <button className="vault-icon-btn bare" aria-label="More" onClick={(e) => e.stopPropagation()}>
+                  <Icon name="more" size={18} />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
