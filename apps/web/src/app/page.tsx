@@ -1,69 +1,46 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { AppFooter } from "./AppFooter";
 import { useAuth } from "../lib/client-context";
 import type { AssetDTO } from "../lib/types";
+import { toVaultAsset } from "../lib/vault/data";
+import type { VaultAsset, VaultAssetType } from "../lib/vault/model";
+import { formatBytes, relativeTime } from "../lib/vault/format";
+import { Icon } from "../components/ui/Icon";
+import { AssetCard } from "../components/vault/AssetCard";
+import { AddToBundleModal, DeleteModal } from "../components/vault/modals";
 
-function isExpired(value: string | null): boolean {
-  return value !== null && new Date(value).getTime() < Date.now();
-}
+type Filter = "all" | VaultAssetType;
+type Layout = "grid" | "list";
 
-function isPdf(asset: AssetDTO): boolean {
-  return asset.format.toLowerCase() === "pdf";
-}
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "image", label: "Images" },
+  { key: "document", label: "Documents" },
+  { key: "logo", label: "Logos" },
+];
 
-function galleryImageSources(asset: AssetDTO): {
-  src: string;
-  srcSet?: string;
-} | null {
-  const candidates = ["thumb", "standard", "large"] as const;
-  const renditions = candidates
-    .map((name) => asset.renditions.find((r) => r.name === name))
-    .filter((r): r is NonNullable<typeof r> => Boolean(r));
-  if (renditions.length === 0) return null;
-
-  const srcSet = renditions
-    .map((r) => `${r.url} ${Math.max(r.width, r.height)}w`)
-    .join(", ");
-  const standard =
-    asset.renditions.find((r) => r.name === "standard") ??
-    asset.renditions.find((r) => r.name === "large") ??
-    renditions[0]!;
-
-  return { src: standard.url, srcSet };
-}
-
-export default function GalleryPage() {
-  const {
-    client,
-    isAuthenticated,
-    accounts,
-    activeAccount,
-    permissions,
-    switchAccount,
-  } = useAuth();
+export default function LibraryPage() {
+  const { client, isAuthenticated, activeAccount, hasPermission } = useAuth();
   const router = useRouter();
-  const [assets, setAssets] = useState<AssetDTO[]>([]);
+  const [assets, setAssets] = useState<VaultAsset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{
-    current: number;
-    total: number;
-  } | null>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
-  const canUpload = permissions.includes("assets:create");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [layout, setLayout] = useState<Layout>("grid");
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [modal, setModal] = useState<null | "addToBundle" | "delete">(null);
+
+  const canDelete = hasPermission("assets:delete");
 
   const refresh = async () => {
     const { items } = await client.listAssets();
-    setAssets(items);
+    setAssets(items.map((a: AssetDTO) => toVaultAsset(a)));
     setLoading(false);
   };
 
   useEffect(() => {
-    // wait a tick for token hydration
     const t = setTimeout(() => {
       if (!localStorage.getItem("assetx.accessToken")) {
         router.push("/login");
@@ -75,133 +52,216 @@ export default function GalleryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, activeAccount?.account.id]);
 
-  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length === 0) return;
-    const failed: string[] = [];
-    setUploading(true);
-    setUploadProgress(files.length > 1 ? { current: 0, total: files.length } : null);
-    try {
-      for (const [index, file] of files.entries()) {
-        setUploadProgress(
-          files.length > 1 ? { current: index + 1, total: files.length } : null,
-        );
-        try {
-          await client.uploadAsset(file);
-        } catch {
-          failed.push(file.name);
-        }
-      }
-      await refresh();
-      if (failed.length > 0) {
-        alert(`Upload failed for:\n${failed.join("\n")}`);
-      }
-    } finally {
-      setUploading(false);
-      setUploadProgress(null);
-      if (fileInput.current) fileInput.current.value = "";
-    }
-  };
+  const counts = useMemo(() => {
+    const c: Record<Filter, number> = { all: assets.length, image: 0, document: 0, logo: 0 };
+    for (const a of assets) c[a.type] += 1;
+    return c;
+  }, [assets]);
 
-  const uploadLabel =
-    uploading && uploadProgress
-      ? `Uploading ${uploadProgress.current} of ${uploadProgress.total}...`
-      : uploading
-        ? "Uploading..."
-        : "Upload asset";
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return assets.filter((a) => {
+      if (filter !== "all" && a.type !== filter) return false;
+      if (q && !a.name.toLowerCase().includes(q) && !a.tags.some((t) => t.toLowerCase().includes(q)))
+        return false;
+      return true;
+    });
+  }, [assets, filter, query]);
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const clearSelection = () => setSelected(new Set());
+
+  const deleteSelected = async () => {
+    const ids = [...selected];
+    await Promise.allSettled(ids.map((id) => client.deleteAsset(id)));
+    clearSelection();
+    await refresh();
+  };
 
   return (
     <>
-      <header className="appbar">
-        <div className="brand">Asset gallery</div>
-        <div className="appbar-actions">
-          {accounts.length > 0 && (
-            <select
-              className="input account-select"
-              value={activeAccount?.account.id ?? ""}
-              onChange={(e) => switchAccount(e.target.value)}
-              aria-label="Active account"
-            >
-              {accounts.map((ctx) => (
-                <option key={ctx.account.id} value={ctx.account.id}>
-                  {ctx.account.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            className="btn"
-            disabled={uploading || !canUpload}
-            onClick={() => fileInput.current?.click()}
-          >
-            <span aria-hidden>＋</span>
-            <span className="btn-label">{uploadLabel}</span>
-          </button>
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/*,application/pdf"
-            multiple
-            hidden
-            onChange={onUpload}
-          />
-        </div>
-      </header>
-
-      <main className="container">
-        {loading ? (
-          <div className="center-state">
-            <div className="spinner" />
-            <p>Loading your assets…</p>
+      <div className="vault-view-header">
+        <div className="vault-header-row">
+          <div>
+            <h1 className="vault-view-title">All assets</h1>
+            <div className="vault-view-sub">
+              {assets.length} {assets.length === 1 ? "asset" : "assets"} · {activeAccount?.account.name}
+            </div>
           </div>
-        ) : assets.length === 0 ? (
-          <div className="center-state">
-            <h2>No assets yet</h2>
-            <p>Upload your first image or PDF to get started.</p>
+          <div className="vault-search">
+            <Icon name="search" size={17} />
+            <input
+              placeholder="Search assets, tags, people…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="vault-filter-row">
+        <div className="vault-filter-left">
+          {FILTERS.map((f) => (
             <button
-              className="btn"
-              disabled={uploading || !canUpload}
-              onClick={() => fileInput.current?.click()}
+              key={f.key}
+              className={`vault-chip${filter === f.key ? " selected" : ""}`}
+              onClick={() => setFilter(f.key)}
             >
-              {uploadLabel}
+              {f.label}
+              <span className="vault-chip-count">{counts[f.key]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="vault-filter-right">
+          <div className="vault-segmented" role="group" aria-label="Layout">
+            <button
+              className={layout === "grid" ? "active" : ""}
+              aria-label="Grid view"
+              aria-pressed={layout === "grid"}
+              onClick={() => setLayout("grid")}
+            >
+              <Icon name="grid" size={16} />
+            </button>
+            <button
+              className={layout === "list" ? "active" : ""}
+              aria-label="List view"
+              aria-pressed={layout === "list"}
+              onClick={() => setLayout("list")}
+            >
+              <Icon name="list" size={16} />
             </button>
           </div>
-        ) : (
-          <div className="grid">
-            {assets.map((a) => {
-              const imageSources = galleryImageSources(a);
-              const expired = isExpired(a.expiresAt);
-              const pdf = isPdf(a);
-              return (
-                <Link key={a.id} href={`/assets/${a.id}`} className="card">
-                  {pdf && !imageSources ? (
-                    <div className="thumb placeholder">PDF document</div>
-                  ) : imageSources ? (
-                    <img
-                      className="thumb"
-                      src={imageSources.src}
-                      srcSet={imageSources.srcSet}
-                      sizes="(max-width: 700px) 50vw, (max-width: 1200px) 33vw, 280px"
-                      alt={a.title ?? a.originalName}
-                    />
-                  ) : (
-                    <div className="thumb placeholder">Processing…</div>
-                  )}
-                  <div className="meta">
-                    <div className="title">{a.title ?? a.originalName}</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <span className={`badge ${a.status}`}>{a.status}</span>
-                      {pdf && <span className="badge">PDF</span>}
-                      {expired && <span className="badge failed">Expired</span>}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </main>
-      <AppFooter />
+        </div>
+      </div>
+
+      <div className="vault-main-scroll">
+        <div className="vault-scroll-body">
+          {loading ? (
+            <div className="vault-empty">
+              <div className="spinner" />
+              <p>Loading your assets…</p>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="vault-empty">
+              <h2>No assets found</h2>
+              <p>Upload an image or document, or adjust your filters.</p>
+            </div>
+          ) : layout === "grid" ? (
+            <div className="vault-grid">
+              {visible.map((a) => (
+                <AssetCard
+                  key={a.id}
+                  asset={a}
+                  selected={selected.has(a.id)}
+                  onToggleSelect={toggle}
+                />
+              ))}
+            </div>
+          ) : (
+            <table className="vault-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Tags</th>
+                  <th>Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((a) => {
+                  const isSel = selected.has(a.id);
+                  return (
+                    <tr
+                      key={a.id}
+                      className={isSel ? "selected" : ""}
+                      onClick={() => router.push(`/assets/${a.id}`)}
+                    >
+                      <td>
+                        <div className="vault-row-name">
+                          <button
+                            type="button"
+                            className={`vault-check${isSel ? " checked" : ""}`}
+                            aria-label={isSel ? "Deselect" : "Select"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggle(a.id);
+                            }}
+                          >
+                            {isSel && <Icon name="check" size={12} strokeWidth={3} />}
+                          </button>
+                          {a.thumbnailUrl ? (
+                            <img className="vault-row-thumb" src={a.thumbnailUrl} alt="" />
+                          ) : (
+                            <span className="vault-row-thumb" />
+                          )}
+                          <span>{a.name}</span>
+                        </div>
+                      </td>
+                      <td style={{ textTransform: "capitalize", color: "var(--text-muted)" }}>
+                        {a.type}
+                      </td>
+                      <td style={{ color: "var(--text-muted)" }}>{formatBytes(a.sizeBytes)}</td>
+                      <td style={{ color: "var(--text-muted)" }}>
+                        {a.tags.slice(0, 2).join(", ") || "—"}
+                      </td>
+                      <td style={{ color: "var(--text-muted)" }}>{relativeTime(a.updatedAt)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      {selected.size > 0 && (
+        <div className="vault-action-bar">
+          <span className="count">{selected.size} selected</span>
+          <span className="divider" />
+          <button className="vault-bar-btn brand" onClick={() => setModal("addToBundle")}>
+            <Icon name="layers" size={15} />
+            Add to bundle
+          </button>
+          <button className="vault-bar-btn" onClick={() => alert("TODO: bulk download")}>
+            <Icon name="download" size={15} />
+            Download
+          </button>
+          {canDelete && (
+            <button className="vault-bar-btn danger" onClick={() => setModal("delete")}>
+              <Icon name="trash" size={15} />
+              Delete
+            </button>
+          )}
+          <span className="divider" />
+          <button className="vault-bar-close" aria-label="Clear selection" onClick={clearSelection}>
+            <Icon name="x" size={16} />
+          </button>
+        </div>
+      )}
+
+      {modal === "addToBundle" && (
+        <AddToBundleModal
+          selectedCount={selected.size}
+          assetIds={[...selected]}
+          onClose={() => setModal(null)}
+          onDone={clearSelection}
+        />
+      )}
+      {modal === "delete" && (
+        <DeleteModal
+          count={selected.size}
+          onClose={() => setModal(null)}
+          onConfirm={deleteSelected}
+        />
+      )}
     </>
   );
 }
