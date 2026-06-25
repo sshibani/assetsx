@@ -17,6 +17,7 @@ import {
   type AssetDTO,
   type AssetTimelineItemDTO,
   type AssetActivityType,
+  type AssetType,
 } from "@assetx/shared-types";
 import type { AuthUser } from "../authorization.js";
 import { hasPermission, isSuperUser } from "../authorization.js";
@@ -49,6 +50,13 @@ export interface UpdateMetadataInput {
 /** Bound tag input so a crafted request can't create unbounded tag rows. */
 const MAX_TAGS = 50;
 const MAX_TAG_LENGTH = 64;
+
+/**
+ * Raster image formats as stored in `Asset.format` (the `file-type` ext, so
+ * jpeg is stored as "jpg"). Kept in sync with classifyAssetType's notion of
+ * "image" for DB-level filtering.
+ */
+const IMAGE_FORMATS_DB = ["jpg", "jpeg", "png", "webp", "gif", "avif"];
 
 /** Normalize, trim, lowercase, dedupe and sort a tag list. */
 export function normalizeTags(tags: string[]): string[] {
@@ -126,7 +134,7 @@ export class AssetService {
 
   async list(
     user: AuthUser,
-    filters: { tag?: string } = {},
+    filters: { tag?: string; type?: AssetType } = {},
   ): Promise<AssetDTO[]> {
     if (!hasPermission(user, "assets:read")) {
       throw new AssetError("Forbidden", 403);
@@ -136,9 +144,11 @@ export class AssetService {
         ? {}
         : { accountId: this.requireAccount(user) };
     const tag = filters.tag?.trim().toLowerCase();
-    const where = tag
-      ? { ...scope, tags: { some: { tag } } }
-      : scope;
+    const where = {
+      ...scope,
+      ...(tag ? { tags: { some: { tag } } } : {}),
+      ...this.typeWhere(filters.type),
+    };
     const assets = await this.prisma.asset.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -147,6 +157,25 @@ export class AssetService {
     return assets.map((a) =>
       this.toDTO(a, a.renditions, a.tags.map((t) => t.tag)),
     );
+  }
+
+  /** Translate an AssetType filter into a Prisma where-fragment. */
+  private typeWhere(type?: AssetType): object {
+    if (!type) return {};
+    if (type === "logo") {
+      return { OR: [{ format: "svg" }, { tags: { some: { tag: "logo" } } }] };
+    }
+    if (type === "image") {
+      return {
+        format: { in: IMAGE_FORMATS_DB },
+        NOT: { tags: { some: { tag: "logo" } } },
+      };
+    }
+    // document: everything that isn't an image or a logo
+    return {
+      format: { notIn: [...IMAGE_FORMATS_DB, "svg"] },
+      NOT: { tags: { some: { tag: "logo" } } },
+    };
   }
 
   async getForUser(id: string, user: AuthUser): Promise<AssetDTO> {

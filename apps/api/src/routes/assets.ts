@@ -14,6 +14,7 @@ const updateSchema = z.object({
 
 const listQuerySchema = z.object({
   tag: z.string().min(1).max(64).optional(),
+  type: z.enum(["image", "document", "logo"]).optional(),
 });
 
 const commentSchema = z.object({

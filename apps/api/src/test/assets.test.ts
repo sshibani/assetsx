@@ -409,6 +409,67 @@ describe("asset tags", () => {
   });
 });
 
+describe("asset type classification", () => {
+  it("classifies an image upload as type=image", async () => {
+    const created = (await uploadImage(token)).json();
+    expect(created.type).toBe("image");
+  });
+
+  it("classifies a PDF upload as type=document", async () => {
+    const created = (
+      await injectMultipart(token, makeTestPdf(), "doc.pdf", "application/pdf")
+    ).json();
+    expect(created.type).toBe("document");
+  });
+
+  it("reclassifies an image as logo when tagged 'logo'", async () => {
+    const created = (await uploadImage(token)).json();
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: ["logo", "brand"] },
+    });
+    expect(res.json().type).toBe("logo");
+  });
+
+  it("filters the list by type", async () => {
+    const img = (await uploadImage(token, "i.png")).json();
+    const pdf = (
+      await injectMultipart(token, makeTestPdf(), "d.pdf", "application/pdf")
+    ).json();
+    const logo = (await uploadImage(token, "l.png")).json();
+    await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${logo.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: ["logo"] },
+    });
+
+    const images = await app.inject({
+      method: "GET",
+      url: "/api/assets?type=image",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const imageIds = images.json().items.map((i: { id: string }) => i.id).sort();
+    expect(imageIds).toEqual([img.id].sort());
+
+    const docs = await app.inject({
+      method: "GET",
+      url: "/api/assets?type=document",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(docs.json().items.map((i: { id: string }) => i.id)).toEqual([pdf.id]);
+
+    const logos = await app.inject({
+      method: "GET",
+      url: "/api/assets?type=logo",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(logos.json().items.map((i: { id: string }) => i.id)).toEqual([logo.id]);
+  });
+});
+
 describe("asset comments and activity", () => {
   it("returns a timeline with create activity and comments", async () => {
     const created = (await uploadImage(token)).json();

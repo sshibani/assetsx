@@ -7,6 +7,26 @@ export type RenditionName = (typeof RENDITION_NAMES)[number];
 export const METADATA_SOURCES = ["manual", "llm"] as const;
 export type MetadataSource = (typeof METADATA_SOURCES)[number];
 
+export const ASSET_TYPES = ["image", "document", "logo"] as const;
+export type AssetType = (typeof ASSET_TYPES)[number];
+
+const IMAGE_FORMATS = ["jpg", "jpeg", "png", "webp", "gif", "avif"];
+const LOGO_FORMATS = ["svg"];
+
+/**
+ * Classify an asset into a Library filter type. Single source of truth shared
+ * by the API mapper and the web UI. "logo" wins when the format is a vector
+ * (svg) or the asset carries a `logo` tag; otherwise images are classified by
+ * raster format and everything else (pdf/docx/unknown) is a document.
+ */
+export function classifyAssetType(format: string, tags: string[] = []): AssetType {
+  const f = format.toLowerCase();
+  if (LOGO_FORMATS.includes(f)) return "logo";
+  if (tags.some((t) => t.toLowerCase() === "logo")) return "logo";
+  if (IMAGE_FORMATS.includes(f)) return "image";
+  return "document";
+}
+
 export const USER_ROLES = ["super_user", "user"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
@@ -182,6 +202,7 @@ export interface AssetDTO {
   metadataSource: MetadataSource;
   metadata: ImageMetadataDTO | null;
   tags: string[];
+  type: AssetType;
   renditions: RenditionDTO[];
   originalUrl: string;
   expiresAt: string | null;
