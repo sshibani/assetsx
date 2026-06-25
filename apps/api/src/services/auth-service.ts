@@ -6,6 +6,7 @@ import type {
   User,
 } from "@prisma/client";
 import { hashPassword, verifyPassword, type TokenService } from "@assetx/auth";
+import type { StorageProvider } from "@assetx/storage";
 import type {
   AccountDTO,
   AccountMembershipDTO,
@@ -13,6 +14,7 @@ import type {
   AuthAccountContext,
   AuthTokens,
   GlobalRole,
+  Locale,
   UserDTO,
 } from "@assetx/shared-types";
 import { permissionsForAccountRole } from "@assetx/shared-types";
@@ -34,6 +36,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly tokens: TokenService,
+    private readonly storage?: StorageProvider,
   ) {}
 
   async register(
@@ -354,6 +357,11 @@ export class AuthService {
       id: user.id,
       email: user.email,
       globalRole: user.globalRole as GlobalRole,
+      locale: user.locale as Locale,
+      avatarUrl:
+        user.avatarStorageKey && this.storage
+          ? this.storage.getUrl(user.avatarStorageKey)
+          : null,
       createdAt: user.createdAt.toISOString(),
     };
   }

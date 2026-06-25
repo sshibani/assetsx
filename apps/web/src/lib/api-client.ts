@@ -18,6 +18,7 @@ import type {
   ChannelInfoLike,
   DateTimeFormat,
   GlobalRole,
+  Locale,
   UserDTO,
   PublicationDTO,
 } from "./types";
@@ -129,6 +130,42 @@ export class ApiClient {
 
   async listAccounts(): Promise<{ items: AuthAccountContext["account"][] }> {
     return this.request<{ items: AuthAccountContext["account"][] }>("/api/accounts");
+  }
+
+  // --- Self-service user profile ---
+  async getMe(): Promise<UserDTO> {
+    return this.request<UserDTO>("/api/users/me");
+  }
+
+  async updateMyLocale(locale: Locale): Promise<UserDTO> {
+    return this.request<UserDTO>("/api/users/me", {
+      method: "PATCH",
+      body: { locale },
+    });
+  }
+
+  async uploadMyAvatar(file: File): Promise<UserDTO> {
+    const form = new FormData();
+    form.set("file", file);
+    return this.request<UserDTO>("/api/users/me/avatar", {
+      method: "POST",
+      body: form,
+      isForm: true,
+    });
+  }
+
+  async removeMyAvatar(): Promise<UserDTO> {
+    return this.request<UserDTO>("/api/users/me/avatar", { method: "DELETE" });
+  }
+
+  async changeMyPassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    await this.request<void>("/api/users/me/password", {
+      method: "POST",
+      body: { currentPassword, newPassword },
+    });
   }
 
   // --- Account administration ---

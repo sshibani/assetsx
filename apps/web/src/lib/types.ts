@@ -20,11 +20,14 @@ export type {
   PublicBundleDTO,
   DateTimeFormat,
   GlobalRole,
+  Locale,
   Permission,
   PublicationDTO,
   RenditionDTO,
   UserDTO,
 } from "@assetx/shared-types";
+
+export { LOCALES } from "@assetx/shared-types";
 
 export interface ChannelInfoLike {
   id: string;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/client-context";
 import { isPublicRoute } from "../lib/routes";
 import { toStorageUsage } from "../lib/vault/data";
@@ -19,7 +19,6 @@ interface NavDef {
 
 export function VaultSidebar() {
   const pathname = usePathname() ?? "/";
-  const router = useRouter();
   const {
     client,
     isAuthenticated,
@@ -215,13 +214,26 @@ export function VaultSidebar() {
             />
           </div>
         </div>
-        <div className="vault-user">
-          <span
-            className="vault-avatar"
-            style={{ width: 32, height: 32, background: "#ffcfbd", color: "#7a3b22" }}
-          >
-            {initials(user?.email ?? "U")}
-          </span>
+        <Link
+          href="/account"
+          className={`vault-user${pathname.startsWith("/account") ? " active" : ""}`}
+          title="Account settings"
+        >
+          {user?.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.avatarUrl}
+              alt=""
+              style={{ width: 32, height: 32, borderRadius: 9999, objectFit: "cover", flex: "none" }}
+            />
+          ) : (
+            <span
+              className="vault-avatar"
+              style={{ width: 32, height: 32, background: "#ffcfbd", color: "#7a3b22" }}
+            >
+              {initials(user?.email ?? "U")}
+            </span>
+          )}
           <span className="vault-user-meta">
             <span className="vault-user-name">
               {user?.email?.replace(/@.*/, "") ?? "User"}
@@ -230,18 +242,8 @@ export function VaultSidebar() {
               {user?.globalRole === "super_user" ? "Platform admin" : "Member"}
             </span>
           </span>
-          <button
-            className="vault-icon-btn bare"
-            style={{ marginLeft: "auto", width: 32, height: 32 }}
-            title="Log out"
-            aria-label="Log out"
-            onClick={() => {
-              router.push("/login");
-            }}
-          >
-            <Icon name="arrow-left" size={16} />
-          </button>
-        </div>
+          <Icon name="settings" size={16} />
+        </Link>
       </div>
     </aside>
   );

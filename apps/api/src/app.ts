@@ -5,6 +5,7 @@ import fastifyStatic from "@fastify/static";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerAccountRoutes } from "./routes/accounts.js";
 import { registerAdminUserRoutes } from "./routes/admin-users.js";
+import { registerUserRoutes } from "./routes/users.js";
 import { registerAssetRoutes } from "./routes/assets.js";
 import { registerBundleRoutes } from "./routes/bundles.js";
 import { registerPublishRoutes } from "./routes/publish.js";
@@ -38,6 +39,7 @@ export async function buildApp(
   await registerAuthRoutes(app, deps);
   await registerAccountRoutes(app, deps);
   await registerAdminUserRoutes(app, deps);
+  await registerUserRoutes(app, deps);
   await registerAssetRoutes(app, deps);
   await registerBundleRoutes(app, deps);
   await registerPublishRoutes(app, deps);
