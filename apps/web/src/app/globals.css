@@ -1157,9 +1157,28 @@ h3 {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  border-radius: 10px;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.1s ease-out;
+}
+.vault-user:hover {
+  background: var(--bg);
+}
+.vault-user.active {
+  background: var(--brand-tint);
+}
+.vault-user > .vault-icon-btn,
+.vault-user svg:last-child {
+  margin-left: auto;
+  color: var(--text-faint);
+  flex: none;
 }
 .vault-user-meta {
   min-width: 0;
+  flex: 1;
 }
 .vault-user-name {
   font-size: 13px;

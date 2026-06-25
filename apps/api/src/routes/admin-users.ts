@@ -25,7 +25,7 @@ export async function registerAdminUserRoutes(
   app: FastifyInstance,
   deps: AppDependencies,
 ): Promise<void> {
-  const service = new UserService(deps.prisma);
+  const service = new UserService(deps.prisma, deps.storage);
   const authGuard = makeAuthGuard(deps.tokens, deps.prisma);
 
   app.get("/api/admin/users", { preHandler: authGuard }, async (request, reply) => {

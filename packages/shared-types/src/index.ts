@@ -404,10 +404,16 @@ export interface PublicationDTO {
   createdAt: string;
 }
 
+export const LOCALES = ["en", "nl"] as const;
+export type Locale = (typeof LOCALES)[number];
+export const DEFAULT_LOCALE: Locale = "en";
+
 export interface UserDTO {
   id: string;
   email: string;
   globalRole: GlobalRole;
+  locale: Locale;
+  avatarUrl: string | null;
   createdAt: string;
 }
 

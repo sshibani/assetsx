@@ -55,6 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const refreshUser = async () => {
+    try {
+      const me = await client.me();
+      applyAuthContext(me, me.accounts, me.activeAccount);
+    } catch {
+      /* ignore */
+    }
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_KEY);
     if (stored) {
@@ -67,6 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         )
         .catch(() => logout());
     }
+    // Re-fetch the user when their profile changes (avatar/locale) elsewhere.
+    const onUserChanged = () => void refreshUser();
+    window.addEventListener("assetx:user-changed", onUserChanged);
+    return () => window.removeEventListener("assetx:user-changed", onUserChanged);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client]);
 

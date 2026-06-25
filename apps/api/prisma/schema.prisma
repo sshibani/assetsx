@@ -12,6 +12,8 @@ model User {
   email        String         @unique
   passwordHash String?
   globalRole   String         @default("user") // super_user | user
+  locale       String         @default("en") // en | nl
+  avatarStorageKey String?    // storage key for the user's uploaded avatar
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   memberships  AccountMembership[]

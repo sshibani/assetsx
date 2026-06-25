@@ -27,7 +27,7 @@ export async function registerAuthRoutes(
   app: FastifyInstance,
   deps: AppDependencies,
 ): Promise<void> {
-  const service = new AuthService(deps.prisma, deps.tokens);
+  const service = new AuthService(deps.prisma, deps.tokens, deps.storage);
   const authGuard = makeAuthGuard(deps.tokens, deps.prisma);
 
   app.post("/api/auth/register", async (request, reply) => {
@@ -145,6 +145,10 @@ export async function registerAuthRoutes(
       id: user.id,
       email: user.email,
       globalRole: user.globalRole,
+      locale: user.locale,
+      avatarUrl: user.avatarStorageKey
+        ? deps.storage.getUrl(user.avatarStorageKey)
+        : null,
       createdAt: user.createdAt.toISOString(),
       activeAccount: request.user!.accountId,
       accounts: await service.accountContextsForUser(user.id),
