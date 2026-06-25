@@ -4,8 +4,32 @@ import { buildApp } from "../app.js";
 import {
   createTestContext,
   createUserWithToken,
+  makeTestImage,
   type TestContext,
 } from "./test-helpers.js";
+
+async function injectLogoUpload(
+  app: FastifyInstance,
+  accessToken: string,
+  accountId: string,
+  fileBuffer: Buffer,
+  filename: string,
+  contentType: string,
+) {
+  const form = new FormData();
+  form.set("file", new Blob([fileBuffer], { type: contentType }), filename);
+  const response = new Response(form);
+  const body = Buffer.from(await response.arrayBuffer());
+  return app.inject({
+    method: "POST",
+    url: `/api/accounts/${accountId}/logo`,
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      "content-type": response.headers.get("content-type")!,
+    },
+    payload: body,
+  });
+}
 
 let ctx: TestContext;
 let app: FastifyInstance;
@@ -376,6 +400,87 @@ describe("account settings", () => {
       headers: { authorization: `Bearer ${viewer.accessToken}` },
       payload: { timezone: "UTC" },
     });
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+describe("account logo", () => {
+  it("returns null logoUrl when no logo is set", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/accounts/${owner.accountId}/settings`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(res.json().logoUrl).toBeNull();
+  });
+
+  it("uploads a workspace logo and exposes logoUrl", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const image = await makeTestImage(64, 64);
+    const res = await injectLogoUpload(
+      app,
+      owner.accessToken,
+      owner.accountId!,
+      image,
+      "logo.png",
+      "image/png",
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.json().logoUrl).toContain(
+      `/files/accounts/${owner.accountId}/branding/logo`,
+    );
+    expect(
+      await ctx.deps.storage.exists(
+        `accounts/${owner.accountId}/branding/logo.png`,
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects a non-image upload", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const res = await injectLogoUpload(
+      app,
+      owner.accessToken,
+      owner.accountId!,
+      Buffer.from("not an image"),
+      "logo.png",
+      "image/png",
+    );
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("removes the logo", async () => {
+    const owner = await createUserWithToken(ctx, { accountRole: "account_owner" });
+    const image = await makeTestImage(64, 64);
+    await injectLogoUpload(
+      app,
+      owner.accessToken,
+      owner.accountId!,
+      image,
+      "logo.png",
+      "image/png",
+    );
+    const del = await app.inject({
+      method: "DELETE",
+      url: `/api/accounts/${owner.accountId}/logo`,
+      headers: { authorization: `Bearer ${owner.accessToken}` },
+    });
+    expect(del.statusCode).toBe(200);
+    expect(del.json().logoUrl).toBeNull();
+  });
+
+  it("forbids a viewer from uploading a logo", async () => {
+    const viewer = await createUserWithToken(ctx, { accountRole: "account_viewer" });
+    const image = await makeTestImage(64, 64);
+    const res = await injectLogoUpload(
+      app,
+      viewer.accessToken,
+      viewer.accountId!,
+      image,
+      "logo.png",
+      "image/png",
+    );
     expect(res.statusCode).toBe(403);
   });
 });

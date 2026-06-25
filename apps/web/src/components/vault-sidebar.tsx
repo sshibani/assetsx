@@ -34,6 +34,7 @@ export function VaultSidebar() {
     bundles: 0,
   });
   const [storage, setStorage] = useState<VaultStorageUsage | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const accountId = activeAccount?.account.id ?? null;
 
@@ -51,6 +52,12 @@ export function VaultSidebar() {
         .getAccountUsage(accountId)
         .then((u) => {
           if (!cancelled) setStorage(toStorageUsage(u));
+        })
+        .catch(() => undefined);
+      client
+        .getAccountSettings(accountId)
+        .then((s) => {
+          if (!cancelled) setLogoUrl(s.logoUrl);
         })
         .catch(() => undefined);
     }
@@ -93,8 +100,23 @@ export function VaultSidebar() {
           aria-haspopup="menu"
           aria-expanded={menuOpen}
         >
-          <span className="vault-tenant-tile" style={{ background: brand }}>
-            {initials(tenantName)[0]}
+          <span
+            className="vault-tenant-tile"
+            style={{
+              background: logoUrl ? "var(--surface-2)" : brand,
+              overflow: "hidden",
+            }}
+          >
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
+            ) : (
+              initials(tenantName)[0]
+            )}
           </span>
           <span className="vault-tenant-meta">
             <span className="vault-tenant-name">{tenantName}</span>

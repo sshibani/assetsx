@@ -16,12 +16,25 @@ import type {
   DateTimeFormat,
 } from "@assetx/shared-types";
 import { isValidHexColor, PLAN_STORAGE_QUOTA_BYTES } from "@assetx/shared-types";
+import { fileTypeFromBuffer } from "file-type";
+import type { StorageProvider } from "@assetx/storage";
 import type { AuthUser } from "../authorization.js";
 import { hasPermission, isSuperUser } from "../authorization.js";
 import { AssetError } from "./asset-service.js";
 
+/** Image MIME types accepted for a workspace logo (incl. SVG). */
+const LOGO_MIME_EXT: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/svg+xml": "svg",
+};
+
 export class AccountService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly storage?: StorageProvider,
+  ) {}
 
   async list(user: AuthUser): Promise<AccountDTO[]> {
     if (isSuperUser(user)) {
@@ -303,6 +316,81 @@ export class AccountService {
     return this.toSettingsDTO(settings);
   }
 
+  async uploadLogo(
+    accountId: string,
+    user: AuthUser,
+    file: { buffer: Buffer },
+  ): Promise<AccountSettingsDTO> {
+    await this.assertAccountPermission(accountId, user, "account:update");
+    const storage = this.requireStorage();
+
+    const detected = await fileTypeFromBuffer(file.buffer);
+    // SVG often isn't detected by magic bytes; fall back to a lightweight sniff.
+    const mime =
+      detected?.mime ?? (this.looksLikeSvg(file.buffer) ? "image/svg+xml" : undefined);
+    if (!mime || !(mime in LOGO_MIME_EXT)) {
+      throw new AssetError("Logo must be a PNG, JPEG, WebP or SVG image", 400);
+    }
+
+    const ext = LOGO_MIME_EXT[mime]!;
+    const key = this.logoKey(accountId, ext);
+
+    // Remove any previously stored logo with a different extension.
+    const existing = await this.prisma.accountSettings.findUnique({
+      where: { accountId },
+      select: { logoStorageKey: true },
+    });
+    if (existing?.logoStorageKey && existing.logoStorageKey !== key) {
+      await storage.delete(existing.logoStorageKey);
+    }
+
+    await storage.put(key, file.buffer, mime);
+
+    const settings = await this.prisma.accountSettings.upsert({
+      where: { accountId },
+      create: { accountId, logoStorageKey: key },
+      update: { logoStorageKey: key },
+    });
+    return this.toSettingsDTO(settings);
+  }
+
+  async removeLogo(
+    accountId: string,
+    user: AuthUser,
+  ): Promise<AccountSettingsDTO> {
+    await this.assertAccountPermission(accountId, user, "account:update");
+    const storage = this.requireStorage();
+    const existing = await this.prisma.accountSettings.findUnique({
+      where: { accountId },
+      select: { logoStorageKey: true },
+    });
+    if (existing?.logoStorageKey) {
+      await storage.delete(existing.logoStorageKey);
+    }
+    const settings = await this.prisma.accountSettings.upsert({
+      where: { accountId },
+      create: { accountId, logoStorageKey: null },
+      update: { logoStorageKey: null },
+    });
+    return this.toSettingsDTO(settings);
+  }
+
+  private requireStorage(): StorageProvider {
+    if (!this.storage) {
+      throw new AssetError("Storage is not configured", 500);
+    }
+    return this.storage;
+  }
+
+  private logoKey(accountId: string, ext: string): string {
+    return `accounts/${accountId}/branding/logo.${ext}`;
+  }
+
+  private looksLikeSvg(buffer: Buffer): boolean {
+    const head = buffer.subarray(0, 256).toString("utf8").trimStart().toLowerCase();
+    return head.startsWith("<?xml") ? head.includes("<svg") : head.startsWith("<svg");
+  }
+
   private async assertNotLastOwner(
     accountId: string,
     excludingMembershipId: string,
@@ -354,8 +442,10 @@ export class AccountService {
       dateTimeFormat: settings.dateTimeFormat as DateTimeFormat,
       timezone: settings.timezone,
       brandColor: settings.brandColor,
-      // Logo upload/serving is deferred; expose null until storage wiring lands.
-      logoUrl: null,
+      logoUrl:
+        settings.logoStorageKey && this.storage
+          ? this.storage.getUrl(settings.logoStorageKey)
+          : null,
       typeface: settings.typeface,
       createdAt: settings.createdAt.toISOString(),
       updatedAt: settings.updatedAt.toISOString(),
