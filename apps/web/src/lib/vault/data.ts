@@ -163,18 +163,17 @@ export function brandColorForAccount(accountId: string): string {
   return ACCENTS[hash % ACCENTS.length]!;
 }
 
-/**
- * ASS-49: storage usage endpoint not available. Returns a stable placeholder so
- * the meter renders; replace with a real GET /api/accounts/:id/usage call.
- */
-export function stubStorageUsage(): VaultStorageUsage {
-  const quotaBytes = 100 * 1024 ** 3;
-  const usedBytes = Math.round(0.642 * quotaBytes);
+/** Map the API usage payload into the sidebar/meter view-model. */
+export function toStorageUsage(usage: {
+  usedBytes: number;
+  quotaBytes: number;
+}): VaultStorageUsage {
+  const quotaBytes = usage.quotaBytes > 0 ? usage.quotaBytes : 1;
   return {
-    usedBytes,
+    usedBytes: usage.usedBytes,
     quotaBytes,
-    label: formatStorageLabel(usedBytes, quotaBytes),
-    fraction: usedBytes / quotaBytes,
+    label: formatStorageLabel(usage.usedBytes, quotaBytes),
+    fraction: Math.min(usage.usedBytes / quotaBytes, 1),
   };
 }
 

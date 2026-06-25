@@ -3,6 +3,7 @@ import type {
   AccountMembershipDTO,
   AccountRole,
   AccountSettingsDTO,
+  AccountUsageDTO,
   AdminAccountDTO,
   AdminUserDTO,
   AdminUserDetailDTO,
@@ -150,6 +151,10 @@ export class ApiClient {
       method: "PATCH",
       body: data,
     });
+  }
+
+  async getAccountUsage(accountId: string): Promise<AccountUsageDTO> {
+    return this.request<AccountUsageDTO>(`/api/accounts/${accountId}/usage`);
   }
 
   async getAccountSettings(accountId: string): Promise<AccountSettingsDTO> {

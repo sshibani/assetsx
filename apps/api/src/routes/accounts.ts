@@ -187,6 +187,19 @@ export async function registerAccountRoutes(
   );
 
   app.get(
+    "/api/accounts/:accountId/usage",
+    { preHandler: authGuard },
+    async (request, reply) => {
+      const { accountId } = request.params as { accountId: string };
+      try {
+        return reply.send(await service.getUsage(accountId, request.user!));
+      } catch (err) {
+        return handleError(reply, err);
+      }
+    },
+  );
+
+  app.get(
     "/api/accounts/:accountId/settings",
     { preHandler: authGuard },
     async (request, reply) => {
