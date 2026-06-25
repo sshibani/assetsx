@@ -8,16 +8,22 @@ import { relativeTime } from "../../lib/vault/format";
 import { Icon } from "../../components/ui/Icon";
 import { CreateBundleModal } from "../../components/vault/modals";
 
-function Collage({ count }: { count: number }) {
-  // Cover images aren't on the list DTO; render neutral tiles. (ASS-?)
+function Collage({ count, covers }: { count: number; covers: string[] }) {
+  // The collage shows up to 3 tiles (one large + two stacked); the last tile
+  // carries a "+N" overlay for the remaining assets.
   const extra = Math.max(count - 3, 0);
+  const tiles = [0, 1, 2];
   return (
     <div className="vault-collage">
-      <div className="vault-collage-tile" />
-      <div className="vault-collage-tile" />
-      <div className="vault-collage-tile">
-        {extra > 0 && <div className="vault-collage-more">+{extra}</div>}
-      </div>
+      {tiles.map((i) => (
+        <div key={i} className="vault-collage-tile">
+          {covers[i] && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={covers[i]} alt="" loading="lazy" />
+          )}
+          {i === 2 && extra > 0 && <div className="vault-collage-more">+{extra}</div>}
+        </div>
+      ))}
     </div>
   );
 }
@@ -100,7 +106,7 @@ export default function BundlesPage() {
                       if (e.key === "Enter") router.push(`/bundles/${b.id}`);
                     }}
                   >
-                    <Collage count={b.assetCount} />
+                    <Collage count={b.assetCount} covers={b.coverUrls ?? []} />
                     <div className="vault-card-meta">
                       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-muted)" }}>
                         <span className="vault-dot" style={{ background: status.dot }} />

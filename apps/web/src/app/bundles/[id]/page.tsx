@@ -96,11 +96,17 @@ export default function BundleDetailPage() {
           <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
             <div style={{ width: 128, height: 96, borderRadius: 12, overflow: "hidden", flex: "none" }}>
               <div className="vault-collage" style={{ height: "100%" }}>
-                <div className="vault-collage-tile" />
-                <div className="vault-collage-tile" />
-                <div className="vault-collage-tile">
-                  {extra > 0 && <div className="vault-collage-more">+{extra}</div>}
-                </div>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="vault-collage-tile">
+                    {bundle.coverUrls?.[i] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={bundle.coverUrls[i]} alt="" loading="lazy" />
+                    )}
+                    {i === 2 && extra > 0 && (
+                      <div className="vault-collage-more">+{extra}</div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
             <div>

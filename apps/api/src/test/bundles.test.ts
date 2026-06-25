@@ -121,6 +121,53 @@ describe("GET /api/bundles", () => {
       "B",
     ]);
   });
+
+  it("includes cover thumbnails from the bundle's assets", async () => {
+    const bundle = (await createBundle(token, { title: "Covered" })).json();
+    const asset = await seedAsset(userId, accountId);
+    await ctx.prisma.rendition.create({
+      data: {
+        assetId: asset.id,
+        name: "thumb",
+        storageKey: `assets/${asset.id}/thumb.webp`,
+        width: 480,
+        height: 320,
+        format: "webp",
+        sizeBytes: 100,
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: `/api/bundles/${bundle.id}/assets`,
+      headers: authHeaders(token),
+      payload: { assetId: asset.id },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/bundles",
+      headers: authHeaders(token),
+    });
+    const covered = res
+      .json()
+      .items.find((b: { id: string }) => b.id === bundle.id);
+    expect(Array.isArray(covered.coverUrls)).toBe(true);
+    expect(covered.coverUrls.length).toBeGreaterThan(0);
+    expect(covered.coverUrls[0]).toContain(`assets/${asset.id}/thumb`);
+  });
+
+  it("returns an empty coverUrls array for an empty bundle", async () => {
+    await createBundle(token, { title: "Empty" });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/bundles",
+      headers: authHeaders(token),
+    });
+    const empty = res
+      .json()
+      .items.find((b: { title: string }) => b.title === "Empty");
+    expect(empty.coverUrls).toEqual([]);
+  });
 });
 
 describe("GET /api/bundles/:id", () => {
