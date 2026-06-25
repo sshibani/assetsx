@@ -181,6 +181,7 @@ export interface AssetDTO {
   description: string | null;
   metadataSource: MetadataSource;
   metadata: ImageMetadataDTO | null;
+  tags: string[];
   renditions: RenditionDTO[];
   originalUrl: string;
   expiresAt: string | null;

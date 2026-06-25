@@ -22,6 +22,7 @@ export function assetToDTO(
   asset: Asset,
   renditions: Rendition[],
   storage: StorageProvider,
+  tags: string[] = [],
 ): AssetDTO {
   return {
     id: asset.id,
@@ -38,6 +39,7 @@ export function assetToDTO(
     description: asset.description,
     metadataSource: asset.metadataSource as AssetDTO["metadataSource"],
     metadata: parseJsonObject<ImageMetadataDTO>(asset.metadataJson),
+    tags,
     renditions: renditions.map((r) => ({
       id: r.id,
       name: r.name as RenditionName,

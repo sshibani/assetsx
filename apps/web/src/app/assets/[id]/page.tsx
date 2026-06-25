@@ -10,6 +10,7 @@ import { formatBytes, formatDimensions, relativeTime } from "../../../lib/vault/
 import { Icon } from "../../../components/ui/Icon";
 import { AssetThumb } from "../../../components/vault/AssetCard";
 import { AddToBundleModal, DeleteModal, ShareModal } from "../../../components/vault/modals";
+import { TagEditor } from "../../../components/vault/TagEditor";
 import { ExifPanel } from "./ExifPanel";
 
 export default function AssetDetailPage() {
@@ -183,10 +184,11 @@ export default function AssetDetailPage() {
           <div className="vault-divider" />
 
           <h3 className="vault-section-label">Tags</h3>
-          {/* TODO(ASS-45): editable tags. */}
-          <p style={{ color: "var(--text-muted)", margin: 0, fontSize: 13 }}>
-            Tagging is coming soon.
-          </p>
+          <TagEditor
+            tags={asset.tags}
+            disabled={!canUpdate}
+            onChange={(next) => void save({ tags: next })}
+          />
 
           {asset.metadata && (
             <>

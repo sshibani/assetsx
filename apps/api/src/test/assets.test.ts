@@ -224,7 +224,7 @@ describe("PATCH /api/assets/:id", () => {
     expect(res.json().title).toBe("My Title");
     expect(res.json().description).toBe("My Description");
     expect(res.json()).not.toHaveProperty("altText");
-    expect(res.json()).not.toHaveProperty("tags");
+    expect(res.json().tags).toEqual([]);
 
     const activity = await ctx.prisma.assetActivity.findFirst({
       where: { assetId: created.id, type: "asset.updated" },
@@ -302,6 +302,110 @@ describe("PATCH /api/assets/:id", () => {
       payload: { expiresAt: "2026-02-30" },
     });
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe("asset tags", () => {
+  it("defaults to an empty tags array on a new asset", async () => {
+    const created = (await uploadImage(token)).json();
+    expect(created.tags).toEqual([]);
+  });
+
+  it("sets tags via PATCH, normalizing/deduping and returning them sorted", async () => {
+    const created = (await uploadImage(token)).json();
+    const res = await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: ["  Brand ", "logo", "brand", "LOGO", "hero"] },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().tags).toEqual(["brand", "hero", "logo"]);
+
+    // persisted and returned on subsequent reads
+    const get = await app.inject({
+      method: "GET",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(get.json().tags).toEqual(["brand", "hero", "logo"]);
+  });
+
+  it("replaces the full tag set and can clear all tags", async () => {
+    const created = (await uploadImage(token)).json();
+    await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: ["a", "b"] },
+    });
+    const cleared = await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: [] },
+    });
+    expect(cleared.json().tags).toEqual([]);
+  });
+
+  it("logs an update activity when tags change", async () => {
+    const created = (await uploadImage(token)).json();
+    await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: ["spring"] },
+    });
+    const activity = await ctx.prisma.assetActivity.findFirst({
+      where: { assetId: created.id, type: "asset.updated" },
+    });
+    expect(activity).not.toBeNull();
+    expect(JSON.parse(activity!.detailsJson!).changedFields).toContain("tags");
+  });
+
+  it("rejects invalid tags (too long or too many)", async () => {
+    const created = (await uploadImage(token)).json();
+    const tooLong = await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: ["x".repeat(65)] },
+    });
+    expect(tooLong.statusCode).toBe(400);
+
+    const tooMany = await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${created.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: Array.from({ length: 51 }, (_, i) => `t${i}`) },
+    });
+    expect(tooMany.statusCode).toBe(400);
+  });
+
+  it("filters the asset list by tag", async () => {
+    const a = (await uploadImage(token, "a.png")).json();
+    const b = (await uploadImage(token, "b.png")).json();
+    await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${a.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: ["hero", "brand"] },
+    });
+    await app.inject({
+      method: "PATCH",
+      url: `/api/assets/${b.id}`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { tags: ["icon"] },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/assets?tag=hero",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const ids = res.json().items.map((i: { id: string }) => i.id);
+    expect(ids).toEqual([a.id]);
   });
 });
 

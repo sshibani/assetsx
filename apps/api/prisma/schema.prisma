@@ -120,10 +120,23 @@ model Asset {
   comments       AssetComment[]
   activities     AssetActivity[]
   bundleAssets   BundleAsset[]
+  tags           AssetTag[]
 
   @@index([accountId])
   @@index([accountId, createdAt])
   @@index([ownerId])
+}
+
+model AssetTag {
+  id        String   @id @default(uuid())
+  assetId   String
+  tag       String
+  createdAt DateTime @default(now())
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, tag])
+  @@index([assetId])
+  @@index([tag])
 }
 
 model AssetComment {

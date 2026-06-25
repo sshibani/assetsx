@@ -43,6 +43,21 @@ export interface UpdateMetadataInput {
   title?: string | null;
   description?: string | null;
   expiresAt?: string | null;
+  tags?: string[];
+}
+
+/** Bound tag input so a crafted request can't create unbounded tag rows. */
+const MAX_TAGS = 50;
+const MAX_TAG_LENGTH = 64;
+
+/** Normalize, trim, lowercase, dedupe and sort a tag list. */
+export function normalizeTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  for (const raw of tags) {
+    const tag = raw.trim().toLowerCase();
+    if (tag.length > 0) seen.add(tag);
+  }
+  return [...seen].sort();
 }
 
 export interface CreateCommentInput {
@@ -106,33 +121,42 @@ export class AssetService {
       },
     });
 
-    return this.toDTO(asset, []);
+    return this.toDTO(asset, [], []);
   }
 
-  async list(user: AuthUser): Promise<AssetDTO[]> {
+  async list(
+    user: AuthUser,
+    filters: { tag?: string } = {},
+  ): Promise<AssetDTO[]> {
     if (!hasPermission(user, "assets:read")) {
       throw new AssetError("Forbidden", 403);
     }
-    const where =
+    const scope =
       isSuperUser(user) && !user.accountId
         ? {}
         : { accountId: this.requireAccount(user) };
+    const tag = filters.tag?.trim().toLowerCase();
+    const where = tag
+      ? { ...scope, tags: { some: { tag } } }
+      : scope;
     const assets = await this.prisma.asset.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { renditions: true },
+      include: { renditions: true, tags: true },
     });
-    return assets.map((a) => this.toDTO(a, a.renditions));
+    return assets.map((a) =>
+      this.toDTO(a, a.renditions, a.tags.map((t) => t.tag)),
+    );
   }
 
   async getForUser(id: string, user: AuthUser): Promise<AssetDTO> {
     const asset = await this.prisma.asset.findUnique({
       where: { id },
-      include: { renditions: true },
+      include: { renditions: true, tags: true },
     });
     if (!asset) throw new AssetError("Asset not found", 404);
     this.assertCanAccessAsset(asset, user, "assets:read");
-    return this.toDTO(asset, asset.renditions);
+    return this.toDTO(asset, asset.renditions, asset.tags.map((t) => t.tag));
   }
 
   async updateMetadata(
@@ -140,9 +164,24 @@ export class AssetService {
     user: AuthUser,
     input: UpdateMetadataInput,
   ): Promise<AssetDTO> {
-    const asset = await this.prisma.asset.findUnique({ where: { id } });
+    const asset = await this.prisma.asset.findUnique({
+      where: { id },
+      include: { tags: true },
+    });
     if (!asset) throw new AssetError("Asset not found", 404);
     this.assertCanAccessAsset(asset, user, "assets:update");
+
+    if (input.tags !== undefined) {
+      if (input.tags.length > MAX_TAGS) {
+        throw new AssetError(`A maximum of ${MAX_TAGS} tags is allowed`, 400);
+      }
+      if (input.tags.some((t) => t.trim().length > MAX_TAG_LENGTH)) {
+        throw new AssetError(
+          `Tags must be ${MAX_TAG_LENGTH} characters or less`,
+          400,
+        );
+      }
+    }
 
     const expiresAt =
       input.expiresAt !== undefined
@@ -157,10 +196,34 @@ export class AssetService {
     };
     const changes = this.changedMetadata(asset, data);
 
+    const currentTags = asset.tags.map((t) => t.tag).sort();
+    const nextTags =
+      input.tags !== undefined ? normalizeTags(input.tags) : currentTags;
+    const tagsChanged =
+      input.tags !== undefined &&
+      JSON.stringify(currentTags) !== JSON.stringify(nextTags);
+    if (tagsChanged) {
+      changes.push({
+        field: "tags",
+        before: currentTags.join(", ") || null,
+        after: nextTags.join(", ") || null,
+      });
+    }
+
     const updated = await this.prisma.asset.update({
       where: { id },
-      data,
-      include: { renditions: true },
+      data: {
+        ...data,
+        ...(tagsChanged
+          ? {
+              tags: {
+                deleteMany: {},
+                create: nextTags.map((tag) => ({ tag })),
+              },
+            }
+          : {}),
+      },
+      include: { renditions: true, tags: true },
     });
     if (changes.length > 0) {
       await this.prisma.assetActivity.create({
@@ -182,7 +245,7 @@ export class AssetService {
         },
       });
     }
-    return this.toDTO(updated, updated.renditions);
+    return this.toDTO(updated, updated.renditions, updated.tags.map((t) => t.tag));
   }
 
   async listTimeline(
@@ -403,7 +466,11 @@ export class AssetService {
     };
   }
 
-  private toDTO(asset: Asset, renditions: Rendition[]): AssetDTO {
-    return assetToDTO(asset, renditions, this.storage);
+  private toDTO(
+    asset: Asset,
+    renditions: Rendition[],
+    tags: string[],
+  ): AssetDTO {
+    return assetToDTO(asset, renditions, this.storage, tags);
   }
 }
