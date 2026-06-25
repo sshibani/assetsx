@@ -52,6 +52,7 @@ export class UserService {
           email: found.email,
           role: m.role as AccountRole,
           status: m.status as AccountMembershipDTO["status"],
+          lastActiveAt: m.lastActiveAt?.toISOString() ?? null,
           createdAt: m.createdAt.toISOString(),
           updatedAt: m.updatedAt.toISOString(),
         }),
