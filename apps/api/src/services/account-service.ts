@@ -13,6 +13,7 @@ import type {
   AdminAccountDTO,
   DateTimeFormat,
 } from "@assetx/shared-types";
+import { isValidHexColor } from "@assetx/shared-types";
 import type { AuthUser } from "../authorization.js";
 import { hasPermission, isSuperUser } from "../authorization.js";
 import { AssetError } from "./asset-service.js";
@@ -237,13 +238,37 @@ export class AccountService {
   async updateSettings(
     accountId: string,
     user: AuthUser,
-    input: { dateTimeFormat?: DateTimeFormat; timezone?: string },
+    input: {
+      dateTimeFormat?: DateTimeFormat;
+      timezone?: string;
+      brandColor?: string;
+      typeface?: string | null;
+    },
   ): Promise<AccountSettingsDTO> {
     await this.assertAccountPermission(accountId, user, "account:update");
+
+    const data: {
+      dateTimeFormat?: DateTimeFormat;
+      timezone?: string;
+      brandColor?: string;
+      typeface?: string | null;
+    } = {};
+    if (input.dateTimeFormat !== undefined) data.dateTimeFormat = input.dateTimeFormat;
+    if (input.timezone !== undefined) data.timezone = input.timezone;
+    if (input.brandColor !== undefined) {
+      if (!isValidHexColor(input.brandColor)) {
+        throw new AssetError("brandColor must be a hex color (e.g. #343ced)", 400);
+      }
+      data.brandColor = input.brandColor.toLowerCase();
+    }
+    if (input.typeface !== undefined) {
+      data.typeface = input.typeface?.trim() ? input.typeface.trim() : null;
+    }
+
     const settings = await this.prisma.accountSettings.upsert({
       where: { accountId },
-      create: { accountId, ...input },
-      update: input,
+      create: { accountId, ...data },
+      update: data,
     });
     return this.toSettingsDTO(settings);
   }
@@ -297,6 +322,10 @@ export class AccountService {
       accountId: settings.accountId,
       dateTimeFormat: settings.dateTimeFormat as DateTimeFormat,
       timezone: settings.timezone,
+      brandColor: settings.brandColor,
+      // Logo upload/serving is deferred; expose null until storage wiring lands.
+      logoUrl: null,
+      typeface: settings.typeface,
       createdAt: settings.createdAt.toISOString(),
       updatedAt: settings.updatedAt.toISOString(),
     };

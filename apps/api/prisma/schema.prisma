@@ -43,6 +43,9 @@ model AccountSettings {
   accountId      String   @unique
   dateTimeFormat String   @default("ISO") // ISO | US | EU
   timezone       String   @default("UTC") // IANA timezone id
+  brandColor     String   @default("#343ced") // hex accent for multi-tenant theming
+  logoStorageKey String? // storage key for the workspace logo (upload TBD)
+  typeface       String? // display typeface name
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   account        Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)

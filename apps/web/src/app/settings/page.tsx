@@ -47,9 +47,18 @@ export default function SettingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  const [savingBrand, setSavingBrand] = useState(false);
+  const canUpdateAccount = hasPermission("account:update");
+
   useEffect(() => {
     if (!activeId) return;
     setBrandColor(brandColorForAccount(activeId));
+    client
+      .getAccountSettings(activeId)
+      .then((s) => {
+        if (s.brandColor) setBrandColor(s.brandColor);
+      })
+      .catch(() => undefined);
     if (canManageMembers) {
       client
         .listMembers(activeId)
@@ -58,6 +67,19 @@ export default function SettingsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId, tab]);
+
+  const saveBrandColor = async (color: string) => {
+    if (!activeId || !canUpdateAccount) return;
+    setSavingBrand(true);
+    try {
+      const updated = await client.updateAccountSettings(activeId, {
+        brandColor: color,
+      });
+      setBrandColor(updated.brandColor);
+    } finally {
+      setSavingBrand(false);
+    }
+  };
 
   if (!ready) {
     return (
@@ -98,7 +120,10 @@ export default function SettingsPage() {
             <BrandingTab
               tenantName={tenantName}
               brandColor={brandColor}
+              canUpdate={canUpdateAccount}
+              saving={savingBrand}
               onSelect={setBrandColor}
+              onSave={saveBrandColor}
             />
           )}
           {tab === "members" && (
@@ -119,11 +144,17 @@ export default function SettingsPage() {
 function BrandingTab({
   tenantName,
   brandColor,
+  canUpdate,
+  saving,
   onSelect,
+  onSave,
 }: {
   tenantName: string;
   brandColor: string;
+  canUpdate: boolean;
+  saving: boolean;
   onSelect: (c: string) => void;
+  onSave: (c: string) => void | Promise<void>;
 }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 380px", gap: 36, maxWidth: 1100 }}>
@@ -135,9 +166,11 @@ function BrandingTab({
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 60, height: 60, borderRadius: 14, background: brandColor }} />
-          <button className="vault-btn">Replace logo</button>
+          <button className="vault-btn" disabled title="Logo upload coming soon">
+            Replace logo
+          </button>
         </div>
-        {/* TODO(ASS-48): persist logo. */}
+        {/* Logo upload deferred — see ASS-48 follow-up. */}
 
         <div className="vault-divider" />
 
@@ -152,21 +185,33 @@ function BrandingTab({
                 style={{ background: s.value, color: s.value }}
                 aria-label={s.name}
                 aria-pressed={selected}
-                onClick={() => onSelect(s.value)}
+                disabled={!canUpdate || saving}
+                onClick={() => {
+                  // Update the live preview immediately, then persist.
+                  onSelect(s.value);
+                  void onSave(s.value);
+                }}
               >
                 {selected && <Icon name="check" size={18} strokeWidth={3} className="" />}
               </button>
             );
           })}
         </div>
-        {/* TODO(ASS-48): persist brand color via account settings. */}
 
         <div className="vault-divider" />
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="vault-btn brand" disabled title="Persisted via ASS-48">
-            Save changes
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            className="vault-btn brand"
+            disabled={!canUpdate || saving}
+            onClick={() => void onSave(brandColor)}
+          >
+            {saving ? "Saving…" : "Save changes"}
           </button>
-          <button className="vault-btn">Reset</button>
+          {!canUpdate && (
+            <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
+              You need account admin rights to change branding.
+            </span>
+          )}
         </div>
       </div>
 

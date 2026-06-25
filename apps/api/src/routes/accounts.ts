@@ -31,6 +31,8 @@ const settingsUpdateSchema = z
   .object({
     dateTimeFormat: z.enum(DATE_TIME_FORMATS).optional(),
     timezone: z.string().min(1).max(64).optional(),
+    brandColor: z.string().min(1).max(7).optional(),
+    typeface: z.string().max(120).nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required",

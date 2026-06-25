@@ -160,7 +160,12 @@ export class ApiClient {
 
   async updateAccountSettings(
     accountId: string,
-    data: { dateTimeFormat?: DateTimeFormat; timezone?: string },
+    data: {
+      dateTimeFormat?: DateTimeFormat;
+      timezone?: string;
+      brandColor?: string;
+      typeface?: string | null;
+    },
   ): Promise<AccountSettingsDTO> {
     return this.request<AccountSettingsDTO>(
       `/api/accounts/${accountId}/settings`,
