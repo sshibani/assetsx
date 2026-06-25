@@ -157,6 +157,16 @@ export class ApiClient {
     return this.request<AccountUsageDTO>(`/api/accounts/${accountId}/usage`);
   }
 
+  async setAccountQuota(
+    accountId: string,
+    quotaBytes: number | null,
+  ): Promise<AccountUsageDTO> {
+    return this.request<AccountUsageDTO>(`/api/accounts/${accountId}/quota`, {
+      method: "PUT",
+      body: { quotaBytes },
+    });
+  }
+
   async uploadAccountLogo(
     accountId: string,
     file: File,

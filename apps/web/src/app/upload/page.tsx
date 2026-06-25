@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/client-context";
 import { Icon } from "../../components/ui/Icon";
 import { formatBytes } from "../../lib/vault/format";
+import type { BundleDTO } from "../../lib/types";
 
 interface QueueItem {
   id: string;
@@ -24,6 +25,8 @@ export default function UploadPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [visibility, setVisibility] = useState<"workspace" | "private">("workspace");
+  const [bundles, setBundles] = useState<BundleDTO[]>([]);
+  const [selectedBundles, setSelectedBundles] = useState<Set<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
   const canUpload = hasPermission("assets:create");
 
@@ -34,10 +37,22 @@ export default function UploadPage() {
         return;
       }
       setReady(true);
+      client
+        .listBundles()
+        .then((r) => setBundles(r.items))
+        .catch(() => setBundles([]));
     }, 50);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
+
+  const toggleBundle = (id: string) =>
+    setSelectedBundles((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const setItem = (id: string, patch: Partial<QueueItem>) =>
     setQueue((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)));
@@ -58,8 +73,20 @@ export default function UploadPage() {
       const item = items[i]!;
       setItem(item.id, { status: "uploading", progress: 35 });
       try {
-        await client.uploadAsset(file);
-        // TODO(ASS-45/ASS-46): apply tags + collection + visibility on upload.
+        const asset = await client.uploadAsset(file);
+        // Apply tags (if any) to the newly uploaded asset.
+        if (tags.length > 0) {
+          await client.updateAsset(asset.id, { tags }).catch(() => undefined);
+        }
+        // Add to any selected bundles.
+        if (selectedBundles.size > 0) {
+          await Promise.allSettled(
+            [...selectedBundles].map((bundleId) =>
+              client.addAssetToBundle(bundleId, asset.id),
+            ),
+          );
+        }
+        // TODO(ASS-54): apply visibility on upload once backend supports it.
         setItem(item.id, { status: "done", progress: 100 });
       } catch {
         setItem(item.id, { status: "error", progress: 0 });
@@ -174,9 +201,48 @@ export default function UploadPage() {
             <div className="vault-panel" style={{ alignSelf: "start" }}>
               <h3 className="vault-section-label">Apply to all</h3>
               <div className="vault-field">
-                <label className="vault-field-label">Collection</label>
-                {/* TODO(ASS-46): wire collections. */}
-                <input className="vault-input" placeholder="No collection" disabled />
+                <label className="vault-field-label">Bundles</label>
+                {bundles.length === 0 ? (
+                  <p style={{ color: "var(--text-muted)", fontSize: 13, margin: 0 }}>
+                    No bundles yet. <Link href="/bundles">Create one</Link>.
+                  </p>
+                ) : (
+                  <div
+                    style={{
+                      maxHeight: 160,
+                      overflowY: "auto",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      padding: 6,
+                    }}
+                  >
+                    {bundles.map((b) => (
+                      <label
+                        key={b.id}
+                        className="vault-list-row"
+                        style={{ padding: "6px 8px", cursor: "pointer", gap: 10 }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedBundles.has(b.id)}
+                          onChange={() => toggleBundle(b.id)}
+                        />
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 500 }}>{b.title}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                            {b.assetCount} {b.assetCount === 1 ? "asset" : "assets"}
+                          </div>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                {selectedBundles.size > 0 && (
+                  <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
+                    Uploaded assets will be added to {selectedBundles.size}{" "}
+                    {selectedBundles.size === 1 ? "bundle" : "bundles"}.
+                  </p>
+                )}
               </div>
               <div className="vault-field">
                 <label className="vault-field-label">Tags</label>

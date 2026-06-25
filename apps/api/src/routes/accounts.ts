@@ -42,6 +42,10 @@ const adminListQuerySchema = z.object({
   q: z.string().min(1).max(120).optional(),
 });
 
+const quotaUpdateSchema = z.object({
+  quotaBytes: z.number().int().nonnegative().nullable(),
+});
+
 function handleError(reply: FastifyReply, err: unknown) {
   if (err instanceof AssetError) {
     return reply.code(err.statusCode).send({ error: err.message });
@@ -193,6 +197,29 @@ export async function registerAccountRoutes(
       const { accountId } = request.params as { accountId: string };
       try {
         return reply.send(await service.getUsage(accountId, request.user!));
+      } catch (err) {
+        return handleError(reply, err);
+      }
+    },
+  );
+
+  app.put(
+    "/api/accounts/:accountId/quota",
+    { preHandler: authGuard },
+    async (request, reply) => {
+      const { accountId } = request.params as { accountId: string };
+      const parsed = quotaUpdateSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: parsed.error.flatten() });
+      }
+      try {
+        return reply.send(
+          await service.setStorageQuota(
+            accountId,
+            request.user!,
+            parsed.data.quotaBytes,
+          ),
+        );
       } catch (err) {
         return handleError(reply, err);
       }

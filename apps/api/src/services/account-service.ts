@@ -241,7 +241,7 @@ export class AccountService {
     await this.assertAccountPermission(accountId, user, "account:read");
     const account = await this.prisma.account.findUnique({
       where: { id: accountId },
-      select: { plan: true },
+      select: { plan: true, storageQuotaBytes: true },
     });
     if (!account) throw new AssetError("Account not found", 404);
 
@@ -258,11 +258,38 @@ export class AccountService {
 
     const usedBytes =
       (assetAgg._sum.sizeBytes ?? 0) + (renditionAgg._sum.sizeBytes ?? 0);
+    // Explicit per-account quota wins; otherwise fall back to the plan default.
     const quotaBytes =
-      PLAN_STORAGE_QUOTA_BYTES[account.plan as AccountPlan] ??
-      PLAN_STORAGE_QUOTA_BYTES.trial;
+      account.storageQuotaBytes != null
+        ? Number(account.storageQuotaBytes)
+        : PLAN_STORAGE_QUOTA_BYTES[account.plan as AccountPlan] ??
+          PLAN_STORAGE_QUOTA_BYTES.trial;
 
     return { accountId, usedBytes, quotaBytes };
+  }
+
+  /**
+   * Set (or clear) an account's explicit storage quota. Platform action —
+   * super user only. Passing null restores the plan-based default.
+   */
+  async setStorageQuota(
+    accountId: string,
+    user: AuthUser,
+    quotaBytes: number | null,
+  ): Promise<AccountUsageDTO> {
+    if (!isSuperUser(user)) throw new AssetError("Forbidden", 403);
+    const account = await this.prisma.account.findUnique({
+      where: { id: accountId },
+    });
+    if (!account) throw new AssetError("Account not found", 404);
+    if (quotaBytes != null && (!Number.isFinite(quotaBytes) || quotaBytes < 0)) {
+      throw new AssetError("quotaBytes must be a non-negative number", 400);
+    }
+    await this.prisma.account.update({
+      where: { id: accountId },
+      data: { storageQuotaBytes: quotaBytes == null ? null : BigInt(Math.floor(quotaBytes)) },
+    });
+    return this.getUsage(accountId, user);
   }
 
   async getSettings(
