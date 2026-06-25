@@ -2089,3 +2089,241 @@ textarea.vault-input {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Asset detail redesign (ASS-55) ---------- */
+.vault-preview-image {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vault-preview-image img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.25);
+}
+
+.vault-rendition-rail {
+  flex: none;
+  width: 100%;
+  max-width: 720px;
+  margin: 20px auto 0;
+}
+.vault-rendition-caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.vault-rendition-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.vault-rendition-showing {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.vault-rendition-showing b {
+  color: var(--text);
+  font-weight: 600;
+}
+.vault-rendition-thumbs {
+  display: flex;
+  gap: 10px;
+}
+.vault-rendition-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 6px;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 11px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.1s ease-out;
+}
+.vault-rendition-btn:hover {
+  border-color: var(--brand);
+}
+.vault-rendition-btn.active {
+  border-color: var(--brand);
+}
+.vault-rendition-thumb {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+.vault-rendition-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vault-rendition-btn.active .vault-rendition-name {
+  color: var(--brand);
+}
+.vault-rendition-dims {
+  font-size: 11px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Right panel header / scroll / tabs */
+.vault-panel-header {
+  flex: none;
+  padding: 24px 24px 0;
+}
+.vault-panel-title {
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.4px;
+  font-weight: 600;
+  margin: 12px 0 0;
+}
+.vault-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px;
+}
+.vault-tab-count {
+  margin-left: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-2);
+  padding: 1px 7px;
+  border-radius: 9999px;
+  color: var(--text-muted);
+}
+
+/* Activity tab */
+.vault-activity {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.vault-timeline {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.vault-timeline-rail {
+  position: absolute;
+  left: 39px;
+  top: 30px;
+  bottom: 30px;
+  width: 2px;
+  background: var(--border);
+}
+.vault-timeline-entry {
+  position: relative;
+  display: flex;
+  gap: 13px;
+  align-items: flex-start;
+}
+.vault-timeline-entry .vault-avatar {
+  box-shadow: 0 0 0 3px #fff;
+}
+.vault-timeline-body {
+  flex: 1;
+  min-width: 0;
+}
+.vault-timeline-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.vault-timeline-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.vault-timeline-time {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+.vault-timeline-event {
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--text-muted);
+}
+.vault-bubble {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  border-top-left-radius: 3px;
+  padding: 10px 13px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+/* Composer */
+.vault-composer {
+  flex: none;
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding: 14px 20px 16px;
+  background: #fff;
+}
+.vault-composer-shell {
+  flex: 1;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vault-composer-input {
+  border: none;
+  outline: none;
+  background: none;
+  resize: none;
+  font-size: 13px;
+  line-height: 19px;
+  font-family: inherit;
+  color: var(--text);
+}
+.vault-composer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 15px;
+  border: none;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--text-faint);
+  cursor: default;
+}
+.vault-composer-btn.enabled {
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+}

@@ -163,6 +163,8 @@ describe("GET /api/assets/:id", () => {
     expect(Array.isArray(res.json().renditions)).toBe(true);
     // metadata is null until the worker extracts it
     expect(res.json().metadata).toBeNull();
+    // owner email is exposed for the "Uploaded by" row
+    expect(res.json().ownerEmail).toMatch(/@/);
   });
 
   it("exposes extracted metadata from metadataJson in the DTO", async () => {

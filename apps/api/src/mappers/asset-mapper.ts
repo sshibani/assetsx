@@ -24,11 +24,13 @@ export function assetToDTO(
   renditions: Rendition[],
   storage: StorageProvider,
   tags: string[] = [],
+  ownerEmail: string | null = null,
 ): AssetDTO {
   return {
     id: asset.id,
     accountId: asset.accountId,
     ownerId: asset.ownerId,
+    ownerEmail,
     originalName: asset.originalName,
     status: asset.status as AssetDTO["status"],
     checksum: asset.checksum,

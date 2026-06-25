@@ -6,6 +6,7 @@ import {
   formatDimensions,
   formatStorageLabel,
   relativeTime,
+  renditionLabel,
 } from "../lib/vault/format";
 
 describe("classifyAssetType", () => {
@@ -67,6 +68,18 @@ describe("brandAlpha", () => {
   });
   it("expands shorthand hex", () => {
     expect(brandAlpha("#fff", 0.5)).toBe("rgba(255, 255, 255, 0.5)");
+  });
+});
+
+describe("renditionLabel", () => {
+  it("maps pipeline names to friendly tier labels", () => {
+    expect(renditionLabel("original")).toBe("Original");
+    expect(renditionLabel("large")).toBe("High");
+    expect(renditionLabel("standard")).toBe("Medium");
+    expect(renditionLabel("thumb")).toBe("Low");
+  });
+  it("falls back to the raw name for unknown tiers", () => {
+    expect(renditionLabel("custom")).toBe("custom");
   });
 });
 

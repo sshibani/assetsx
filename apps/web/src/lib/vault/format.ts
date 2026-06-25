@@ -78,6 +78,24 @@ export function brandAlpha(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+/**
+ * Friendly label for a rendition by its pipeline name. The asset-detail
+ * rendition rail shows these tiers (largest → smallest).
+ */
+const RENDITION_LABELS: Record<string, string> = {
+  original: "Original",
+  large: "High",
+  standard: "Medium",
+  thumb: "Low",
+};
+
+export function renditionLabel(name: string): string {
+  return RENDITION_LABELS[name] ?? name;
+}
+
+/** Display order for the rendition rail (largest first). */
+export const RENDITION_ORDER = ["original", "large", "standard", "thumb"];
+
 /** "64.2 / 100 GB" from raw byte counts. */
 export function formatStorageLabel(usedBytes: number, quotaBytes: number): string {
   const gb = (n: number) => n / 1024 ** 3;
