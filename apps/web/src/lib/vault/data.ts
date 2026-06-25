@@ -54,8 +54,7 @@ export function toVaultAsset(asset: AssetDTO): VaultAsset {
     width: asset.width,
     height: asset.height,
     sizeBytes: asset.sizeBytes,
-    // ASS-45: tags not yet on AssetDTO.
-    tags: [],
+    tags: asset.tags ?? [],
     // ASS-46: collections not yet on AssetDTO.
     collection: null,
     uploadedBy: null,

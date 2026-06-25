@@ -9,6 +9,11 @@ const updateSchema = z.object({
   title: z.string().max(255).nullable().optional(),
   description: z.string().max(5000).nullable().optional(),
   expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  tags: z.array(z.string().max(64)).max(50).optional(),
+});
+
+const listQuerySchema = z.object({
+  tag: z.string().min(1).max(64).optional(),
 });
 
 const commentSchema = z.object({
@@ -52,7 +57,11 @@ export async function registerAssetRoutes(
   });
 
   app.get("/api/assets", { preHandler: authGuard }, async (request, reply) => {
-    const items = await service.list(request.user!);
+    const parsed = listQuerySchema.safeParse(request.query);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.flatten() });
+    }
+    const items = await service.list(request.user!, parsed.data);
     return reply.send({ items });
   });
 
