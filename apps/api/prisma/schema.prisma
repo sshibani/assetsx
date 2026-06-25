@@ -109,6 +109,7 @@ model Asset {
   title          String?
   description    String?
   metadataSource String        @default("manual") // manual | llm
+  metadataJson   String?       // stringified ImageMetadataDTO (EXIF/IPTC/XMP), set by the worker
   expiresAt      DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

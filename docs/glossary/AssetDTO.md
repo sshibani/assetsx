@@ -22,6 +22,7 @@
 | `sizeBytes` | number | Original size. |
 | `title` / `description` | string \| null | Metadata. |
 | `metadataSource` | string | [MetadataSource](./MetadataSource.md). |
+| `metadata` | [ImageMetadataDTO](./ImageMetadataDTO.md) \| null | Extracted EXIF/IPTC/XMP metadata; null until the worker processes the image (and for non-image/EXIF-free files). |
 | `renditions` | [RenditionDTO](./RenditionDTO.md)[] | Generated variants. |
 | `originalUrl` | string | URL to the original file. |
 | `expiresAt` | string \| null | Optional expiry. |

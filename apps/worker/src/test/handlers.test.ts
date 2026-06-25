@@ -5,6 +5,7 @@ import { publishAsset } from "../publish-asset.js";
 import {
   createWorkerTestContext,
   makeTestImage,
+  makeTestImageWithExif,
   type WorkerTestContext,
 } from "./test-helpers.js";
 
@@ -51,6 +52,25 @@ async function seedPendingAsset(): Promise<string> {
       accountId,
       ownerId: userId,
       originalName: "photo.jpg",
+      status: "pending",
+      checksum,
+      format: "jpg",
+      sizeBytes: image.byteLength,
+    },
+  });
+  await ctx.storage.put(`assets/${asset.id}/original`, image, "image/jpeg");
+  return asset.id;
+}
+
+async function seedPendingAssetWithExif(): Promise<string> {
+  const { userId, accountId } = await seedOwner();
+  const image = await makeTestImageWithExif();
+  const checksum = createHash("sha256").update(image).digest("hex");
+  const asset = await ctx.prisma.asset.create({
+    data: {
+      accountId,
+      ownerId: userId,
+      originalName: "exif.jpg",
       status: "pending",
       checksum,
       format: "jpg",
@@ -114,6 +134,40 @@ describe("processAsset", () => {
     expect(count).toBe(4);
   });
 
+  it("extracts and persists EXIF metadata as metadataJson", async () => {
+    const assetId = await seedPendingAssetWithExif();
+    await processAsset(ctx.deps, assetId);
+
+    const asset = await ctx.prisma.asset.findUnique({
+      where: { id: assetId },
+    });
+    expect(asset!.metadataJson).not.toBeNull();
+    const metadata = JSON.parse(asset!.metadataJson!);
+    expect(metadata.cameraMake).toBe("Canon");
+    expect(metadata.cameraModel).toBe("Canon EOS R5");
+  });
+
+  it("leaves metadataJson null for an image without EXIF", async () => {
+    const assetId = await seedPendingAsset();
+    await processAsset(ctx.deps, assetId);
+
+    const asset = await ctx.prisma.asset.findUnique({
+      where: { id: assetId },
+    });
+    expect(asset!.metadataJson).toBeNull();
+  });
+
+  it("re-extracts metadata on reprocess (idempotent)", async () => {
+    const assetId = await seedPendingAssetWithExif();
+    await processAsset(ctx.deps, assetId);
+    await processAsset(ctx.deps, assetId);
+
+    const asset = await ctx.prisma.asset.findUnique({
+      where: { id: assetId },
+    });
+    expect(JSON.parse(asset!.metadataJson!).cameraMake).toBe("Canon");
+  });
+
   it("marks PDF assets ready without generating image renditions", async () => {
     const assetId = await seedPendingPdfAsset();
 
@@ -127,6 +181,7 @@ describe("processAsset", () => {
     expect(asset!.width).toBeNull();
     expect(asset!.height).toBeNull();
     expect(asset!.format).toBe("pdf");
+    expect(asset!.metadataJson).toBeNull();
     expect(asset!.renditions).toEqual([]);
     expect(await ctx.storage.exists(`assets/${assetId}/original`)).toBe(true);
   });

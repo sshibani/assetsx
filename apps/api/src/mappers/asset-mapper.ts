@@ -2,9 +2,11 @@ import type { Asset, Rendition } from "@prisma/client";
 import type { StorageProvider } from "@assetx/storage";
 import type {
   AssetDTO,
+  ImageMetadataDTO,
   PublicAssetDTO,
   RenditionName,
 } from "@assetx/shared-types";
+import { parseJsonObject } from "../lib/json.js";
 
 /** Storage key for an asset's original (uploaded) file. */
 export function originalKey(assetId: string): string {
@@ -35,6 +37,7 @@ export function assetToDTO(
     title: asset.title,
     description: asset.description,
     metadataSource: asset.metadataSource as AssetDTO["metadataSource"],
+    metadata: parseJsonObject<ImageMetadataDTO>(asset.metadataJson),
     renditions: renditions.map((r) => ({
       id: r.id,
       name: r.name as RenditionName,

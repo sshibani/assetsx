@@ -129,6 +129,43 @@ export interface RenditionDTO {
   url: string;
 }
 
+/** GPS coordinates extracted from image EXIF, in decimal degrees. */
+export interface ImageGpsDTO {
+  lat: number;
+  lng: number;
+  altitude: number | null;
+}
+
+/**
+ * Machine-extracted image metadata (EXIF/IPTC/XMP/ICC), normalized and
+ * JSON-serializable. All fields are optional/nullable since most images carry
+ * only a subset (and many carry none).
+ */
+export interface ImageMetadataDTO {
+  // Camera
+  cameraMake: string | null;
+  cameraModel: string | null;
+  lens: string | null;
+  software: string | null;
+  // Capture
+  capturedAt: string | null; // ISO-8601
+  exposureTime: string | null; // e.g. "1/250"
+  fNumber: number | null;
+  iso: number | null;
+  focalLength: number | null; // mm
+  flash: boolean | null;
+  // Geo
+  gps: ImageGpsDTO | null;
+  // Image
+  orientation: number | null;
+  colorSpace: string | null;
+  dpi: number | null;
+  // IPTC / XMP
+  keywords: string[] | null;
+  creator: string | null;
+  copyright: string | null;
+}
+
 export interface AssetDTO {
   id: string;
   accountId: string;
@@ -143,6 +180,7 @@ export interface AssetDTO {
   title: string | null;
   description: string | null;
   metadataSource: MetadataSource;
+  metadata: ImageMetadataDTO | null;
   renditions: RenditionDTO[];
   originalUrl: string;
   expiresAt: string | null;
